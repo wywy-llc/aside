@@ -175,7 +175,21 @@ export class ClaspHelper {
    * @param {?string} scriptIdProd
    */
   async arrangeFiles(rootDir: string, scriptIdProd?: string) {
-    await fs.move('.clasp.json', '.clasp-dev.json');
+    const rootClaspPath = '.clasp.json';
+    const distClaspPath = path.join(rootDir, '.clasp.json');
+    const rootExists = await fs.pathExists(rootClaspPath);
+    if (!rootExists) {
+      const distExists = await fs.pathExists(distClaspPath);
+      if (distExists) {
+        await fs.copyFile(distClaspPath, rootClaspPath);
+      } else {
+        throw new Error(
+          `Missing .clasp.json in ${rootDir} and project root. Please re-run init or clasp create.`
+        );
+      }
+    }
+
+    await fs.move(rootClaspPath, '.clasp-dev.json');
 
     await fs.move(path.join(rootDir, 'appsscript.json'), 'appsscript.json');
 

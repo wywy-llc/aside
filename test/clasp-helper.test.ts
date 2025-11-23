@@ -210,6 +210,7 @@ describe('clasp-helper', () => {
       const fsCopyFileSpy = vi
         .mocked(fs.copyFile)
         .mockImplementation(async () => {});
+      pathExistsMock.mockResolvedValue(true);
 
       await claspHelper.arrangeFiles('rootDir');
 
@@ -226,11 +227,31 @@ describe('clasp-helper', () => {
       );
     });
 
+    it('copies .clasp.json from rootDir when missing in root', async () => {
+      const fsMoveSpy = vi.mocked(fs.move).mockImplementation(async () => {});
+      const fsCopyFileSpy = vi
+        .mocked(fs.copyFile)
+        .mockImplementation(async () => {});
+      pathExistsMock
+        .mockResolvedValueOnce(false) // root .clasp.json missing
+        .mockResolvedValueOnce(true) // dist/.clasp.json exists
+        .mockResolvedValue(true); // appsscript move path check
+
+      await claspHelper.arrangeFiles('rootDir');
+
+      expect(fsCopyFileSpy).toHaveBeenCalledWith(
+        'rootDir/.clasp.json',
+        '.clasp.json'
+      );
+      expect(fsMoveSpy).toHaveBeenCalledWith('.clasp.json', '.clasp-dev.json');
+    });
+
     it('arranges files appropriately with scriptIdProd', async () => {
       vi.mocked(fs.move).mockImplementation(async () => {});
       const writeConfigSpy = vi
         .spyOn(claspHelper, 'writeConfig')
         .mockImplementation(async () => {});
+      pathExistsMock.mockResolvedValue(true);
 
       await claspHelper.arrangeFiles('rootDir', 'abc123');
 
