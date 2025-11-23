@@ -21,16 +21,15 @@ import os from 'os';
 import path from 'path';
 import writeFileAtomic from 'write-file-atomic';
 
-const debugLog = (...args: unknown[]) => {
-  const enabled =
-    process.env.WYSIDE_DEBUG === '1' ||
-    process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
-
-  if (enabled) {
-    // eslint-disable-next-line no-console
-    console.log('[wyside:debug]', ...args);
-  }
-};
+const DEBUG_ENABLED =
+  process.env.WYSIDE_DEBUG === '1' ||
+  process.env.WYSIDE_DEBUG?.toLowerCase() === 'true';
+const debugLog = DEBUG_ENABLED
+  ? (...args: unknown[]) => {
+      // eslint-disable-next-line no-console
+      console.log('[wyside:debug]', ...args);
+    }
+  : () => {};
 
 /**
  * Helper class to wrap clasp utilities.
@@ -163,12 +162,16 @@ export class ClaspHelper {
       throw res.error;
     }
 
-    const output = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim();
+    const failureOutput = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim();
     if (res.status !== 0) {
       throw new Error(
-        output || `clasp create-script failed with status ${res.status}`
+        failureOutput || `clasp create failed with status ${res.status}`
       );
     }
+
+    const combinedOutput = [res.stdout, res.stderr, res.output?.join('\n')]
+      .filter(Boolean)
+      .join('\n');
 
     const claspPathDist = path.join(rootDir, '.clasp.json');
     const claspPathRoot = '.clasp.json';
@@ -182,16 +185,14 @@ export class ClaspHelper {
       claspExistsDist,
       claspExistsRoot,
       appsscriptExists,
-      output,
+      output: combinedOutput,
     });
 
     if (!claspExists || !appsscriptExists) {
       throw new Error(
-        `clasp create-script did not produce ${
-          claspExists ? '' : '.clasp.json '
-        }${appsscriptExists ? '' : 'appsscript.json '}${
-          output ? `\n${output}` : ''
-        }`
+        `clasp create did not produce ${claspExists ? '' : '.clasp.json '}${
+          appsscriptExists ? '' : 'appsscript.json '
+        }${combinedOutput ? `\n${combinedOutput}` : ''}`
       );
     }
 
@@ -203,7 +204,7 @@ export class ClaspHelper {
     await this.arrangeFiles(rootDir, scriptIdProd);
 
     // Extract URLs from output
-    const outputForLinks = res.output.join();
+    const outputForLinks = combinedOutput;
 
     return {
       sheetLink: this.extractSheetsLink(outputForLinks),
