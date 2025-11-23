@@ -1,20 +1,3 @@
-#!/usr/bin/env node
-/**
- * Copyright 2025 wywy LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * you may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -22,11 +5,29 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { syncLocalSecrets } from './tools/sync-local-secrets.js';
-import { scaffoldFeature } from './tools/scaffold-feature.js';
-import { setupNamedRange } from './tools/sheets-tools.js';
-import { driveCreateFolder, driveListFiles } from './tools/drive-tools.js';
-import { gmailSendEmail, gmailListLabels } from './tools/gmail-tools.js';
+import {
+  driveCreateFolder,
+  driveListFiles,
+  type CreateFolderArgs,
+  type ListFilesArgs,
+} from './tools/drive-tools.js';
+import {
+  gmailListLabels,
+  gmailSendEmail,
+  type SendEmailArgs,
+} from './tools/gmail-tools.js';
+import {
+  scaffoldFeature,
+  type ScaffoldFeatureArgs,
+} from './tools/scaffold-feature.js';
+import {
+  setupNamedRange,
+  type SetupNamedRangeArgs,
+} from './tools/sheets-tools.js';
+import {
+  syncLocalSecrets,
+  type SyncLocalSecretsArgs,
+} from './tools/sync-local-secrets.js';
 
 const server = new Server(
   { name: 'wyside-mcp', version: '1.0.0' },
@@ -154,19 +155,27 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
   try {
     switch (name) {
       case 'sync_local_secrets':
-        return await syncLocalSecrets(args);
+        return await syncLocalSecrets(
+          (args || {}) as unknown as SyncLocalSecretsArgs
+        );
       case 'scaffold_feature':
-        return await scaffoldFeature(args);
+        return await scaffoldFeature(
+          (args || {}) as unknown as ScaffoldFeatureArgs
+        );
       case 'setup_named_range':
-        return await setupNamedRange(args);
+        return await setupNamedRange(
+          (args || {}) as unknown as SetupNamedRangeArgs
+        );
       case 'drive_create_folder':
-        return await driveCreateFolder(args);
+        return await driveCreateFolder(
+          (args || {}) as unknown as CreateFolderArgs
+        );
       case 'drive_list_files':
-        return await driveListFiles(args);
+        return await driveListFiles((args || {}) as unknown as ListFilesArgs);
       case 'gmail_send_email':
-        return await gmailSendEmail(args);
+        return await gmailSendEmail((args || {}) as unknown as SendEmailArgs);
       case 'gmail_list_labels':
-        return await gmailListLabels(args);
+        return await gmailListLabels();
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

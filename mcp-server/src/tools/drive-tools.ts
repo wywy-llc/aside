@@ -12,7 +12,7 @@ async function getDriveClient() {
   return google.drive({ version: 'v3', auth });
 }
 
-interface CreateFolderArgs {
+export interface CreateFolderArgs {
   name: string;
   parentId?: string;
 }
@@ -65,7 +65,7 @@ export async function driveCreateFolder(args: CreateFolderArgs) {
   }
 }
 
-interface ListFilesArgs {
+export interface ListFilesArgs {
   query?: string;
   pageSize?: number;
 }

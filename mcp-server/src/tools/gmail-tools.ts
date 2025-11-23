@@ -14,7 +14,7 @@ async function getGmailClient() {
   return google.gmail({ version: 'v1', auth });
 }
 
-interface SendEmailArgs {
+export interface SendEmailArgs {
   to: string;
   subject: string;
   body: string;

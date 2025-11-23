@@ -39,7 +39,7 @@ async function getGcpProject(projectId?: string): Promise<string> {
   );
 }
 
-interface SyncLocalSecretsArgs {
+export interface SyncLocalSecretsArgs {
   projectId?: string;
   spreadsheetId?: string;
 }

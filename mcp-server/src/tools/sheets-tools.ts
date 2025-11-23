@@ -4,7 +4,7 @@ import { GoogleAuth } from 'google-auth-library';
 import { google } from 'googleapis';
 import path from 'path';
 
-interface SetupNamedRangeArgs {
+export interface SetupNamedRangeArgs {
   spreadsheetId: string;
   rangeName: string;
   range: string;

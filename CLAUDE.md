@@ -11,7 +11,7 @@
 
 - **Runtime:** Node.js 22+ (ESM, Strict Mode)
 - **Lang:** TypeScript ES2020
-- **Build:** Rollup + plugins (Cleanup, License, TS, Prettier)
+- **Build:** Rollup + plugins (Cleanup, TS, Prettier)
 - **Test:** Vitest (V8 Coverage)
 - **Deploy:** Google Clasp
 
@@ -25,7 +25,6 @@
 |               | `wyside mcp`         | Start MCP server for AI interaction           |
 | **QA**        | `npm test`           | Run Vitest suite                              |
 |               | `npx vitest --ui`    | Run tests in watch mode with UI               |
-|               | `npm run lint`       | ESLint + Prettier + License Header Check      |
 | **Deploy**    | `clasp login`        | Authenticate with Google                      |
 |               | `clasp push`         | Deploy `dist/` to GAS (Handled via scripts)   |
 | **Debug**     | `WYSIDE_DEBUG=1 ...` | Enable verbose logging for Clasp/Init         |
@@ -64,7 +63,6 @@ wyside/
 
 - **Style:** TypeScript Strict Mode, ESM imports, PascalCase classes, camelCase functions.
 - **Formatting:** Prettier (2-space indent, single quotes). Enforced via ESLint.
-- **License Headers:** **Mandatory** Apache 2.0 header on all source files (`npm run license`).
 - **File Ops:** ALWAYS use `write-file-atomic` to prevent corruption.
 - **Process:** ALWAYS use `cross-spawn` for Windows compatibility.
 

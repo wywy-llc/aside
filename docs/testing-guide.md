@@ -55,13 +55,19 @@ Push the code to Google Apps Script.
 npm run deploy
 ```
 
-### 6. Verify GAS UI
+_Note: The `test:e2e` script automatically includes the deploy step._
 
-1. Open the Spreadsheet.
-2. Reload the page.
-3. Check for "Wyside Todo" menu.
+### 6. Verify GAS UI (Manual Step)
+
+This step requires manual verification in the browser:
+
+1. Open the Spreadsheet (use the link from the init output).
+2. Reload the page to load the GAS Add-on.
+3. Check for "Wyside Todo" menu in the menu bar.
 4. Click "Show Todos" to open the sidebar.
 5. Verify you can add, list, and delete todos via the UI.
+
+_Note: This step cannot be automated as it requires browser interaction with the Google Sheets UI._
 
 ## Troubleshooting
 

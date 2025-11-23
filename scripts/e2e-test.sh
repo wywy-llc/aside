@@ -1,30 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2025 wywy LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# you may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# Copyright 2025 wywyjp inc. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
 
 set -e
 
@@ -67,14 +42,33 @@ echo "🧪 Running integration tests..."
 npm test
 
 # Check test results
-if [ $? -eq 0 ]; then
-  echo ""
-  echo "✅ All tests passed!"
-  echo ""
-  echo "Next step: Deploy to GAS"
-  echo "  cd $TEST_DIR && npm run deploy"
-else
+if [ $? -ne 0 ]; then
   echo ""
   echo "❌ Tests failed!"
+  exit 1
+fi
+
+echo ""
+echo "✅ All tests passed!"
+
+# Deploy to GAS
+echo ""
+echo "📤 Deploying to Google Apps Script..."
+npm run deploy
+
+# Check deploy results
+if [ $? -eq 0 ]; then
+  echo ""
+  echo "✅ Deployment successful!"
+  echo ""
+  echo "📋 Next steps (Manual Verification):"
+  echo "  1. Open the Spreadsheet (check the init output for the link)"
+  echo "  2. Reload the page"
+  echo "  3. Check for 'Wyside Todo' menu"
+  echo "  4. Click 'Show Todos' to open the sidebar"
+  echo "  5. Verify you can add, list, and delete todos via the UI"
+else
+  echo ""
+  echo "❌ Deployment failed!"
   exit 1
 fi
