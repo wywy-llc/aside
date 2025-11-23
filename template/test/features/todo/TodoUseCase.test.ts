@@ -2,8 +2,34 @@ import { UniversalSheetsClient } from '@/core/client';
 import { TodoUseCase } from '@/features/todo/TodoUseCase';
 import { UniversalTodoRepo } from '@/features/todo/UniversalTodoRepo';
 import { beforeEach, describe, expect, it } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 
 const SPREADSHEET_ID = process.env.APP_SPREADSHEET_ID_1_DEV || '';
+
+// Check if service account key is a dummy
+function isValidServiceAccount(): boolean {
+  const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!keyPath) return false;
+
+  try {
+    const keyContent = fs.readFileSync(path.resolve(keyPath), 'utf-8');
+    const key = JSON.parse(keyContent);
+    // Check if it's a dummy key
+    return (
+      key.private_key &&
+      !key.private_key.includes('DUMMY_PRIVATE_KEY') &&
+      key.project_id !== 'dummy-project'
+    );
+  } catch {
+    return false;
+  }
+}
+
+const SHOULD_RUN_TESTS =
+  SPREADSHEET_ID &&
+  isValidServiceAccount() &&
+  !SPREADSHEET_ID.includes('_abc123');
 
 describe('TodoUseCase Integration', () => {
   let client: UniversalSheetsClient;
@@ -11,7 +37,7 @@ describe('TodoUseCase Integration', () => {
   let useCase: TodoUseCase;
 
   beforeEach(async () => {
-    if (!SPREADSHEET_ID) {
+    if (!SHOULD_RUN_TESTS) {
       return;
     }
     client = new UniversalSheetsClient();
@@ -20,8 +46,8 @@ describe('TodoUseCase Integration', () => {
   });
 
   it('should add and retrieve a todo', async () => {
-    if (!SPREADSHEET_ID) {
-      console.warn('Skipping test: No SPREADSHEET_ID');
+    if (!SHOULD_RUN_TESTS) {
+      console.warn('Skipping test: No valid service account or SPREADSHEET_ID');
       return;
     }
     const title = `Test Todo ${Date.now()}`;
@@ -41,7 +67,10 @@ describe('TodoUseCase Integration', () => {
   });
 
   it('should toggle completion status', async () => {
-    if (!SPREADSHEET_ID) return;
+    if (!SHOULD_RUN_TESTS) {
+      console.warn('Skipping test: No valid service account or SPREADSHEET_ID');
+      return;
+    }
     const title = `Toggle Test ${Date.now()}`;
     const todo = await useCase.addTodo(title);
 
