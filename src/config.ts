@@ -40,7 +40,7 @@ export const config: {
   ],
   scripts: {
     'clean': 'rimraf build dist',
-    'lint': 'npm run eslint --fix --no-error-on-unmatched-pattern src/ test/',
+    'lint': 'eslint --fix --no-error-on-unmatched-pattern src/ test/',
     'format': 'prettier --write --log-level silent .',
     'bundle': 'rollup --no-treeshake -c rollup.config.mjs',
     'build':
@@ -100,7 +100,7 @@ export const configForAngular: {
     'preinstall':
       'test -d src/ui || (cd src/ && ng new --skip-git --skip-tests=true --routing=false --ssr=false --standalone ui && cd ui/ && ng add --skip-confirmation @angular/material)',
     'clean': 'rimraf build dist',
-    'lint': 'npm run eslint --fix --no-error-on-unmatched-pattern src/ test/',
+    'lint': 'eslint --fix --no-error-on-unmatched-pattern src/ test/',
     'bundle': 'rollup --no-treeshake -c rollup.config.mjs',
     'build': 'npm run clean && npm run bundle',
     'build-ui': 'npm run build --prefix src/ui',
