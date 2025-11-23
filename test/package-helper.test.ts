@@ -47,7 +47,9 @@ describe('package-helper', () => {
 
       const pkgHelper = PackageHelper.load();
       expect(pkgHelper).not.toBe(undefined);
-      expect(pkgHelper!.getContent()).toEqual(expected);
+      if (pkgHelper) {
+        expect(pkgHelper.getContent()).toEqual(expected);
+      }
     });
 
     it('throws an error for unexpected exceptions', () => {

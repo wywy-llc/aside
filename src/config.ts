@@ -165,7 +165,17 @@ export const configForSvelte: {
   filesCopy: Record<string, string>;
   filesMerge: Record<string, string>;
 } = {
-  dependencies: [...config.dependencies, 'fs-extra@^11.1.0'],
+  dependencies: [
+    ...config.dependencies,
+    'fs-extra@^11.1.0',
+    '@sveltejs/vite-plugin-svelte@^3.1.1',
+    'svelte@^4.2.18',
+    'svelte-check@^3.8.4',
+    'tslib@^2.6.3',
+    'tailwindcss@^3.4.7',
+    'postcss@^8.4.40',
+    'autoprefixer@^10.4.20',
+  ],
   scripts: {
     ...config.scripts,
     'preinstall': 'node setup-svelte.mjs',
