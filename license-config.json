@@ -7,7 +7,7 @@
     "dist",
     "*.md",
     "*.yml",
-    "*.html"
+    "doc/*.html"
   ],
   "license": "license-header.txt",
   "licenseFormats": {
