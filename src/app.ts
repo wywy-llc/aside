@@ -525,6 +525,18 @@ export async function init(
   // Handle clasp
   await handleClasp(options);
 
+  // Ensure appsscript.json exists (copy from template if missing)
+  if (!(await fs.pathExists('appsscript.json'))) {
+    const templateAppsscript = path.join(
+      __dirname,
+      '../../template/appsscript.json'
+    );
+    if (await fs.pathExists(templateAppsscript)) {
+      console.log(`${chalk.green('\u2714')}`, 'Copying appsscript.json...');
+      await fs.copyFile(templateAppsscript, 'appsscript.json');
+    }
+  }
+
   // Generate .clasp-*.json from environment variables if available
   // This ensures they exist even if clasp create failed or was skipped
   await generateClaspConfigsFromEnv();

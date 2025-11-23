@@ -65,8 +65,6 @@ export class ClaspHelper {
     debugLog('clean clasp artifacts', { rootDir });
     // Remove all clasp project artifacts
     await fs.remove(path.join(rootDir, '.clasp.json'));
-    await fs.remove(path.join(rootDir, 'appsscript.json')); // Ensure dist/appsscript.json is gone
-    await fs.remove('appsscript.json');
     await fs.remove('.clasp.json');
     await fs.remove('.clasp-dev.json');
     await fs.remove('.clasp-prod.json');
