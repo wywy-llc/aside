@@ -125,14 +125,39 @@ export class ClaspHelper {
       { encoding: 'utf-8' }
     );
 
+    if (res.error) {
+      throw res.error;
+    }
+
+    const output = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim();
+    if (res.status !== 0) {
+      throw new Error(
+        output || `clasp create-script failed with status ${res.status}`
+      );
+    }
+
+    const claspPath = path.join(rootDir, '.clasp.json');
+    const appsscriptPath = path.join(rootDir, 'appsscript.json');
+    const claspExists = await fs.pathExists(claspPath);
+    const appsscriptExists = await fs.pathExists(appsscriptPath);
+    if (!claspExists || !appsscriptExists) {
+      throw new Error(
+        `clasp create-script did not produce ${
+          claspExists ? '' : '.clasp.json '
+        }${appsscriptExists ? '' : 'appsscript.json '}${
+          output ? `\n${output}` : ''
+        }`
+      );
+    }
+
     this.arrangeFiles(rootDir, scriptIdProd);
 
     // Extract URLs from output
-    const output = res.output.join();
+    const outputForLinks = res.output.join();
 
     return {
-      sheetLink: this.extractSheetsLink(output),
-      scriptLink: this.extractScriptLink(output),
+      sheetLink: this.extractSheetsLink(outputForLinks),
+      scriptLink: this.extractScriptLink(outputForLinks),
     };
   }
 

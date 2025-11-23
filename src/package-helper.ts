@@ -179,14 +179,13 @@ export class PackageHelper {
     );
     const stderr = executionResult.stderr ?? '';
     const stdout = executionResult.stdout ?? '';
+    const status = executionResult.status ?? 0;
     if (executionResult.error) {
       throw executionResult.error;
     }
-    if (executionResult.status !== 0) {
+    if (status !== 0) {
       const message =
-        stderr ||
-        stdout ||
-        `npm install failed with status ${executionResult.status}`;
+        stderr || stdout || `npm install failed with status ${status}`;
       throw new Error(message);
     }
 

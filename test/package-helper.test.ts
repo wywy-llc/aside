@@ -16,14 +16,13 @@
 import { SpawnSyncReturns } from 'child_process';
 import spawn from 'cross-spawn';
 import * as fs from 'fs-extra';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PackageHelper } from '../src/package-helper';
 
 vi.mock('fs-extra');
 
 describe('package-helper', () => {
   describe('load', () => {
-    //const pkgHelper = new PackageHelper();
     it('returns undefined if no package.json found', () => {
       vi.mocked(fs.readJsonSync).mockImplementationOnce(() => {
         const err: NodeJS.ErrnoException = new Error('file not found');
@@ -188,7 +187,7 @@ describe('package-helper', () => {
 
       expect(spawnSyncSpy).toHaveBeenCalledWith(
         'npm',
-        ['install', '--silent', 'pkg1', 'pkg2'],
+        ['install', '--no-progress', 'pkg1', 'pkg2'],
         { encoding: 'utf-8' }
       );
       expect(loadSpy).toHaveBeenCalled();
@@ -218,7 +217,7 @@ describe('package-helper', () => {
 
       expect(spawnSyncSpy).toHaveBeenCalledWith(
         'npm',
-        ['install', '--silent', 'pkg2'],
+        ['install', '--no-progress', 'pkg2'],
         { encoding: 'utf-8' }
       );
       expect(loadSpy).toHaveBeenCalled();
@@ -250,7 +249,7 @@ describe('package-helper', () => {
 
       expect(spawnSyncSpy).toHaveBeenCalledWith(
         'npm',
-        ['install', '--silent', 'pkg3'],
+        ['install', '--no-progress', 'pkg3'],
         { encoding: 'utf-8' }
       );
       expect(loadSpy).toHaveBeenCalled();
@@ -277,6 +276,39 @@ describe('package-helper', () => {
         installed: [],
         resolved: ['pkg1', 'pkg2'],
       });
+    });
+
+    it('throws when npm install exits with non-zero status', () => {
+      const spawnSyncSpy = vi.spyOn(spawn, 'sync').mockImplementationOnce(
+        () =>
+          ({
+            status: 1,
+            stdout: 'stdout message',
+            stderr: 'stderr message',
+          } as unknown as SpawnSyncReturns<string>)
+      );
+      const pkgHelper = new PackageHelper({ dependencies: {} });
+
+      expect(() => pkgHelper.installPackages(['pkg1'])).toThrowError(
+        'stderr message'
+      );
+      expect(spawnSyncSpy).toHaveBeenCalled();
+    });
+
+    it('throws when npm install returns an execution error', () => {
+      const spawnSyncSpy = vi.spyOn(spawn, 'sync').mockImplementationOnce(
+        () =>
+          ({
+            status: 1,
+            error: new Error('process failed'),
+          } as unknown as SpawnSyncReturns<string>)
+      );
+      const pkgHelper = new PackageHelper({ dependencies: {} });
+
+      expect(() => pkgHelper.installPackages(['pkg1'])).toThrowError(
+        'process failed'
+      );
+      expect(spawnSyncSpy).toHaveBeenCalled();
     });
   });
 });
