@@ -57,12 +57,11 @@ If you are setting this up from scratch, follow these steps to obtain the necess
 
 ### 3. Spreadsheets Setup
 
-1. Create a new Google Sheet for **Production** (or use an existing one).
+1. Create Google Sheets for **Development** and **Production** (up to 5 sheets can be configured per environment).
    - The URL will look like `https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit`.
-   - Copy the `YOUR_SPREADSHEET_ID` part. This is your `SPREADSHEET_ID`.
-2. (Recommended) Create another Google Sheet for **Testing**.
-   - Copy its ID. This is your `TEST_SPREADSHEET_ID`.
-3. **Crucial Step**: Share both spreadsheets with your Service Account.
+   - Copy the `YOUR_SPREADSHEET_ID` part.
+   - These will be your `APP_SPREADSHEET_ID_1_DEV`, `APP_SPREADSHEET_ID_1_PROD`, etc.
+2. **Crucial Step**: Share all spreadsheets with your Service Account.
    - Copy the Service Account email address from Step 2.
    - In each Google Sheet, click **Share** button.
    - Paste the Service Account email and give it **Editor** access.
@@ -82,15 +81,21 @@ Edit `.env` with your gathered values:
 # Your GCP Project ID from Step 1
 GCP_PROJECT_ID=my-project-123
 
-# Production Spreadsheet ID from Step 3
-SPREADSHEET_ID=1ABC...xyz
+# Development Spreadsheets (up to 5 can be configured)
+APP_SPREADSHEET_ID_1_DEV=1ABC...xyz
+APP_SPREADSHEET_ID_2_DEV=1DEF...uvw
+# ... add more as needed
 
-# Test Spreadsheet ID from Step 3 (Can be same as Prod, but separate is safer)
-TEST_SPREADSHEET_ID=1DEF...uvw
+# Production Spreadsheets
+APP_SPREADSHEET_ID_1_PROD=1GHI...rst
+APP_SPREADSHEET_ID_2_PROD=1JKL...mno
+# ... add more as needed
 
 # Path to your key file (Default is fine)
 GOOGLE_APPLICATION_CREDENTIALS=./secrets/service-account.json
 ```
+
+**Note:** Use `SpreadsheetType` enum in code to reference spreadsheets: `getSpreadsheetId(SpreadsheetType.MAIN)`
 
 ## Development
 
