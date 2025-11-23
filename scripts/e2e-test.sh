@@ -56,7 +56,6 @@ echo "  1. Open the Spreadsheet (URL from init output)"
 echo "  2. Reload the page to trigger onOpen() and initialize sheets"
 echo "  3. Check for 'Wyside Todo' menu"
 echo ""
-read -p "Press Enter after opening and initializing the spreadsheet..."
 
 # Run tests
 echo ""
