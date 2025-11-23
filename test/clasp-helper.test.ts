@@ -231,6 +231,15 @@ describe('clasp-helper', () => {
 
       expect(res).toEqual('https://script.google.com/abc123');
     });
+
+    it('extracts script link when clasp reports Google Sheets Add-on script', () => {
+      const output =
+        'Created new Google Sheets Add-on script: https://script.google.com/addon123';
+
+      const res = claspHelper.extractScriptLink(output);
+
+      expect(res).toEqual('https://script.google.com/addon123');
+    });
   });
 
   describe('arrangeFiles', () => {

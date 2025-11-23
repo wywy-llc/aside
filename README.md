@@ -49,6 +49,12 @@ The simplest way to get started is:
 npx @wywyjp/wyside init
 ```
 
+To inspect initialization issues with verbose debug logs:
+
+```bash
+WYSIDE_DEBUG=1 npx @wywyjp/wyside init
+```
+
 ## What it does
 
 After running the `init` command above, ASIDE will go ahead and do the following:

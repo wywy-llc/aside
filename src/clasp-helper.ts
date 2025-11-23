@@ -114,7 +114,7 @@ export class ClaspHelper {
    */
   extractScriptLink(output: string) {
     const scriptLink = output.match(
-      /Created new (?:google\s+)?(?:apps\s+script\s+project|script|project):\s*([^\s,]+)/i
+      /Created new (?:google\s+)?(?:apps\s+script\s+project|sheets?\s+add-?on\s+script|script|project):\s*([^\s,]+)/i
     );
 
     return scriptLink?.length ? scriptLink[1] : 'Not found';
