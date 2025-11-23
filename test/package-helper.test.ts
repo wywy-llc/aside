@@ -188,7 +188,7 @@ describe('package-helper', () => {
 
       expect(spawnSyncSpy).toHaveBeenCalledWith(
         'npm',
-        ['install', '--ignore-scripts', '--silent', 'pkg1', 'pkg2'],
+        ['install', '--silent', 'pkg1', 'pkg2'],
         { encoding: 'utf-8' }
       );
       expect(loadSpy).toHaveBeenCalled();
@@ -218,7 +218,7 @@ describe('package-helper', () => {
 
       expect(spawnSyncSpy).toHaveBeenCalledWith(
         'npm',
-        ['install', '--ignore-scripts', '--silent', 'pkg2'],
+        ['install', '--silent', 'pkg2'],
         { encoding: 'utf-8' }
       );
       expect(loadSpy).toHaveBeenCalled();
@@ -250,7 +250,7 @@ describe('package-helper', () => {
 
       expect(spawnSyncSpy).toHaveBeenCalledWith(
         'npm',
-        ['install', '--ignore-scripts', '--silent', 'pkg3'],
+        ['install', '--silent', 'pkg3'],
         { encoding: 'utf-8' }
       );
       expect(loadSpy).toHaveBeenCalled();

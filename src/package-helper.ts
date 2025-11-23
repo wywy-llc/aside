@@ -174,7 +174,7 @@ export class PackageHelper {
 
     const executionResult = spawn.sync(
       'npm',
-      ['install', '--ignore-scripts', '--silent'].concat(packagesToInstall),
+      ['install', '--silent'].concat(packagesToInstall),
       { encoding: 'utf-8' }
     );
     if (executionResult.stderr) {
