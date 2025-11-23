@@ -114,13 +114,13 @@ export class ClaspHelper {
       'npx',
       [
         'clasp',
-        'create-script',
+        'create',
         '--type',
         'sheets',
         '--rootDir',
         rootDir,
         '--title',
-        `${title}`,
+        title,
       ],
       { encoding: 'utf-8' }
     );
@@ -136,10 +136,13 @@ export class ClaspHelper {
       );
     }
 
-    const claspPath = path.join(rootDir, '.clasp.json');
+    const claspPathDist = path.join(rootDir, '.clasp.json');
+    const claspPathRoot = '.clasp.json';
     const appsscriptPath = path.join(rootDir, 'appsscript.json');
-    const claspExists = await fs.pathExists(claspPath);
+    const claspExistsDist = await fs.pathExists(claspPathDist);
+    const claspExistsRoot = await fs.pathExists(claspPathRoot);
     const appsscriptExists = await fs.pathExists(appsscriptPath);
+    const claspExists = claspExistsDist || claspExistsRoot;
     if (!claspExists || !appsscriptExists) {
       throw new Error(
         `clasp create-script did not produce ${
@@ -149,6 +152,10 @@ export class ClaspHelper {
         }`
       );
     }
+
+    // Copy clasp config to project root so arrangeFiles can move it.
+    const claspSource = claspExistsDist ? claspPathDist : claspPathRoot;
+    await fs.copyFile(claspSource, '.clasp.json');
 
     this.arrangeFiles(rootDir, scriptIdProd);
 

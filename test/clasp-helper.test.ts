@@ -15,16 +15,39 @@
  */
 import spawn from 'cross-spawn';
 import * as fs from 'fs-extra';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClaspHelper } from '../src/clasp-helper';
 
-vi.mock('fs-extra');
+vi.mock('fs-extra', () => {
+  const exists = vi.fn();
+  const pathExists = vi.fn();
+  const rm = vi.fn();
+  const mkdirs = vi.fn();
+  const move = vi.fn();
+  const copyFile = vi.fn();
+  const readFile = vi.fn();
+  return {
+    default: { exists, pathExists, rm, mkdirs, move, copyFile, readFile },
+    exists,
+    pathExists,
+    rm,
+    mkdirs,
+    move,
+    copyFile,
+    readFile,
+  };
+});
 
 describe('clasp-helper', () => {
   const claspHelper = new ClaspHelper();
+  const pathExistsMock = vi.mocked(fs.pathExists);
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    pathExistsMock.mockReset();
   });
 
   describe('isLoggedIn', () => {
@@ -252,6 +275,69 @@ describe('clasp-helper', () => {
         stdio: 'inherit',
       });
       expect(arrangeFilesSpy).toHaveBeenCalledWith('rootDir', '2');
+    });
+  });
+
+  describe('create', () => {
+    it('copies clasp config from rootDir and returns links', async () => {
+      const spawnSyncSpy = vi.spyOn(spawn, 'sync').mockImplementation(() => ({
+        status: 0,
+        stdout:
+          'Created new document: https://sheets\nCreated new script: https://script',
+        stderr: '',
+        output: [
+          '',
+          'Created new document: https://sheets',
+          'Created new script: https://script',
+        ],
+        pid: 0,
+        signal: null,
+      }));
+      pathExistsMock
+        .mockResolvedValueOnce(true) // dist/.clasp.json
+        .mockResolvedValueOnce(false) // .clasp.json root
+        .mockResolvedValueOnce(true); // dist/appsscript.json
+      const copySpy = vi.mocked(fs.copyFile).mockImplementation(async () => {});
+      const arrangeSpy = vi
+        .spyOn(claspHelper, 'arrangeFiles')
+        .mockImplementation(async () => {});
+
+      const res = await claspHelper.create('title', '', 'dist');
+
+      expect(spawnSyncSpy).toHaveBeenCalledWith(
+        'npx',
+        [
+          'clasp',
+          'create',
+          '--type',
+          'sheets',
+          '--rootDir',
+          'dist',
+          '--title',
+          'title',
+        ],
+        { encoding: 'utf-8' }
+      );
+      expect(copySpy).toHaveBeenCalledWith('dist/.clasp.json', '.clasp.json');
+      expect(arrangeSpy).toHaveBeenCalledWith('dist', '');
+      expect(res.sheetLink).toContain('https://sheets');
+      expect(res.scriptLink).toContain('https://script');
+    });
+
+    it('throws when clasp create does not emit clasp/appsscript files', async () => {
+      vi.spyOn(spawn, 'sync').mockImplementation(() => ({
+        status: 0,
+        stdout: '',
+        stderr: '',
+        output: [],
+        pid: 0,
+        signal: null,
+      }));
+      pathExistsMock.mockResolvedValue(false);
+
+      await expect(claspHelper.create('title', '', 'dist')).rejects.toThrow(
+        /did not produce/i
+      );
     });
   });
 });
