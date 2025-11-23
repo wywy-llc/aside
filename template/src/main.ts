@@ -1,11 +1,13 @@
 import { UniversalSheetsClient } from './core/client.js';
 import { TodoUseCase } from './features/todo/TodoUseCase.js';
 import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
+import { SpreadsheetType, getSpreadsheetId } from './config.js';
 
 // Global functions for GAS
 declare const global: any;
 
-const SPREADSHEET_ID = ScriptApp.getActiveSpreadsheet().getId();
+// Use MAIN spreadsheet for this Todo app
+const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
 
 function getUseCase() {
   const client = new UniversalSheetsClient();
