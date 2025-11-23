@@ -345,6 +345,36 @@ describe('clasp-helper', () => {
       expect(res.scriptLink).toContain('https://script');
     });
 
+    it('waits for arrangeFiles to finish when no prod scriptId is provided', async () => {
+      vi.spyOn(spawn, 'sync').mockImplementation(() => ({
+        status: 0,
+        stdout:
+          'Created new document: https://sheets\nCreated new script: https://script',
+        stderr: '',
+        output: [
+          '',
+          'Created new document: https://sheets',
+          'Created new script: https://script',
+        ],
+        pid: 0,
+        signal: null,
+      }));
+      pathExistsMock
+        .mockResolvedValueOnce(true) // dist/.clasp.json
+        .mockResolvedValueOnce(false) // .clasp.json root
+        .mockResolvedValueOnce(true); // dist/appsscript.json
+      vi.mocked(fs.copyFile).mockResolvedValue();
+      let arrangeFinished = false;
+      vi.spyOn(claspHelper, 'arrangeFiles').mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        arrangeFinished = true;
+      });
+
+      await claspHelper.create('title', '', 'dist');
+
+      expect(arrangeFinished).toBe(true);
+    });
+
     it('throws when clasp create does not emit clasp/appsscript files', async () => {
       vi.spyOn(spawn, 'sync').mockImplementation(() => ({
         status: 0,

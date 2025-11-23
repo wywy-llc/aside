@@ -157,7 +157,7 @@ export class ClaspHelper {
     const claspSource = claspExistsDist ? claspPathDist : claspPathRoot;
     await fs.copyFile(claspSource, '.clasp.json');
 
-    this.arrangeFiles(rootDir, scriptIdProd);
+    await this.arrangeFiles(rootDir, scriptIdProd);
 
     // Extract URLs from output
     const outputForLinks = res.output.join();
@@ -194,7 +194,7 @@ export class ClaspHelper {
     await fs.move(path.join(rootDir, 'appsscript.json'), 'appsscript.json');
 
     if (scriptIdProd) {
-      this.writeConfig(scriptIdProd, rootDir, '.clasp-prod.json');
+      await this.writeConfig(scriptIdProd, rootDir, '.clasp-prod.json');
     } else {
       await fs.copyFile('.clasp-dev.json', '.clasp-prod.json');
     }
