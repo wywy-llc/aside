@@ -10,7 +10,8 @@
     "CONTRIBUTING",
     "build",
     "dist",
-    "src/ui/.angular"
+    "src/ui/.angular",
+    "*.md"
   ],
   "license": "license-header.txt",
   "licenseFormats": {
