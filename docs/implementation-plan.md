@@ -1,82 +1,63 @@
-# wyside プロジェクト：TODO App テンプレート + MCP Server 統合 実装計画
+# wyside TODO App + MCP Server Integration Plan
 
-## 📋 Executive Summary
+## Executive Summary
 
-### プロジェクト目的
+**Objective:** Extend wyside CLI with AI-native unified architecture (per `docs/index.html`).
 
-`docs/index.html`で定義された「AI ネイティブ・ユニファイドアーキテクチャ」を実現する、wyside CLI の大規模拡張プロジェクト。
+**Deliverables:**
 
-### 主要成果物
+1. Test-Separated Hybrid template (`template/`)
+2. MCP Server (`mcp-server/`)
+3. REST API unified TODO app (GAS/Local dual-mode)
+4. GCP auto-setup CLI (`wyside init --setup-gcp`)
+5. Validation env (`test-projects/todo-app/`)
 
-1. **Test-Separated Hybrid 構成のテンプレート** (`template/`)
-2. **MCP Server 統合** (`mcp-server/`)
-3. **完全 REST API 統一の TODO アプリ** (GAS/Local 両対応)
-4. **GCP 自動セットアップ CLI** (`wyside init --setup-gcp`)
-5. **検証環境** (`test-projects/todo-app/`)
+**Tech Stack:**
 
-### 技術スタック
-
-| レイヤー    | 技術                                    |
-| ----------- | --------------------------------------- |
-| **Runtime** | Node.js 22+, Google Apps Script (V8)    |
-| **言語**    | TypeScript (ES2020, Strict Mode)        |
-| **API**     | Google Sheets API v4 (Advanced Service) |
-| **認証**    | Service Account (Local), OAuth (GAS)    |
-| **ビルド**  | Rollup, TSC                             |
-| **テスト**  | Vitest (実 Spreadsheet 結合テスト)      |
-| **MCP**     | @modelcontextprotocol/sdk               |
-| **CLI**     | meow, inquirer                          |
+```yaml
+runtime: [Node.js 22+, Google Apps Script V8]
+lang: TypeScript ES2020 Strict
+api: Google Sheets API v4 (Advanced Service)
+auth: { gas: OAuth, local: Service Account }
+build: [Rollup, TSC]
+test: Vitest + V8 Coverage
+mcp: '@modelcontextprotocol/sdk'
+cli: [meow, inquirer]
+```
 
 ---
 
-## 🏗️ アーキテクチャ設計
+## Architecture Design
 
-### システム全体図
+### System Overview
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  👨‍💻 Developer (VS Code)                                      │
-│  ├─ wyside init --setup-gcp  ← 自動GCPセットアップ           │
-│  ├─ wyside mcp               ← MCPサーバー起動               │
-│  └─ npm test                 ← ローカル結合テスト実行        │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-    ┌────────────▼────────────┐
-    │  🤖 MCP Server          │
-    │  (wyside内蔵)           │
-    ├─────────────────────────┤
-    │ Tools:                  │
-    │ • sync_local_secrets    │ → GCP自動化
-    │ • scaffold_feature      │ → コード生成
-    │ • setup_named_range     │ → 範囲定義
-    └────────────┬────────────┘
-                 │
-    ┌────────────▼────────────┐
-    │  📁 Generated Project   │
-    │  (test-projects/todo)   │
-    ├─────────────────────────┤
-    │ src/                    │ → GAS本番コード
-    │ test/                   │ → Local専用テスト
-    │ secrets/                │ → Service Account
-    └────────────┬────────────┘
-                 │
-         ┌───────┴───────┐
-         ▼               ▼
-    ┌─────────┐    ┌──────────┐
-    │ 🚀 GAS  │    │ 💻 Local │
-    │ Deploy  │    │ Vitest   │
-    └─────────┘    └──────────┘
-         │               │
-         └───────┬───────┘
-                 ▼
-         ┌──────────────┐
-         │ 📊 Google    │
-         │ Spreadsheet  │
-         │ (TODO Data)  │
-         └──────────────┘
+Developer (VS Code)
+├─ wyside init --setup-gcp → GCP auto-setup
+├─ wyside mcp              → MCP server
+└─ npm test                → Local integration tests
+    │
+    ▼
+MCP Server (embedded)
+├─ sync_local_secrets  → GCP automation
+├─ scaffold_feature    → Code generation
+└─ setup_named_range   → Range config
+    │
+    ▼
+Generated Project (test-projects/todo/)
+├─ src/      → GAS production code
+├─ test/     → Local-only tests
+└─ secrets/  → Service Account keys
+    │
+    ├──────┬──────┐
+    │ GAS  │ Local│
+    │Deploy│Vitest│
+    └──────┴──────┘
+         │
+    Google Spreadsheet (TODO Data)
 ```
 
-### Universal Client 環境分岐ロジック
+### Universal Client Environment Detection
 
 ```typescript
 // src/core/client.ts
@@ -86,34 +67,28 @@ class UniversalSheetsClient {
   }
 
   async batchUpdate(spreadsheetId, requests) {
-    if (this.env === 'gas') {
-      // GAS: UrlFetchApp + ScriptApp.getOAuthToken()
-      return this.gasRequest(spreadsheetId, requests);
-    } else {
-      // Node: googleapis + Service Account
-      return this.nodeRequest(spreadsheetId, requests);
-    }
+    return this.env === 'gas'
+      ? this.gasRequest(spreadsheetId, requests) // UrlFetchApp + OAuth
+      : this.nodeRequest(spreadsheetId, requests); // googleapis + SA
   }
 }
 ```
 
 ---
 
-## 📂 ディレクトリ構成
+## Directory Structure
 
-### 1. wyside プロジェクト全体
+### wyside Project
 
 ```text
 wyside/
 ├── docs/
-│   ├── index.html                    # 既存: アーキテクチャ仕様
-│   └── implementation-plan.md        # 🆕 本ドキュメント
+│   ├── index.html                # Architecture spec
+│   └── implementation-plan.md    # This document
 │
-├── mcp-server/                       # 🆕 MCPサーバー実装
-│   ├── package.json
-│   ├── tsconfig.json
+├── mcp-server/                   # 🆕 MCP implementation
 │   ├── src/
-│   │   ├── index.ts                  # MCPエントリーポイント
+│   │   ├── index.ts              # MCP entry
 │   │   ├── tools/
 │   │   │   ├── sync-local-secrets.ts
 │   │   │   ├── scaffold-feature.ts
@@ -121,161 +96,98 @@ wyside/
 │   │   └── templates/
 │   │       ├── universal-repo.ts.hbs
 │   │       └── usecase.ts.hbs
-│   └── build/                        # TSビルド成果物
+│   └── build/
 │
-├── template/                         # 🔄 既存を大幅改修
+├── template/                     # 🔄 Major refactor
 │   ├── .clasp.json
 │   ├── .claspignore
-│   ├── appsscript.json               # 🆕 Advanced Services設定
-│   ├── .env.example                  # 🆕
-│   ├── .gitignore
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── vitest.config.ts              # 🆕
+│   ├── appsscript.json           # 🆕 Advanced Services
+│   ├── .env.example              # 🆕
+│   ├── vitest.config.ts          # 🆕
 │   │
-│   ├── secrets/                      # 🆕 ローカル認証鍵
+│   ├── secrets/                  # 🆕 Local auth
 │   │   └── .gitkeep
 │   │
-│   ├── src/                          # 🔄 GAS本番コード
-│   │   ├── main.ts                   # 🆕 エントリーポイント
-│   │   │
-│   │   ├── core/                     # 🆕 基盤層
-│   │   │   ├── client.ts             # Universal Sheets Client
-│   │   │   ├── auth.ts               # 認証ヘルパー
-│   │   │   ├── types.ts              # 共通型定義
-│   │   │   └── constants.ts          # 名前付き範囲定数
-│   │   │
-│   │   └── features/                 # 🆕 機能層
+│   ├── src/                      # 🔄 GAS production
+│   │   ├── main.ts
+│   │   ├── core/
+│   │   │   ├── client.ts         # Universal Client
+│   │   │   ├── auth.ts
+│   │   │   ├── types.ts
+│   │   │   └── constants.ts
+│   │   └── features/
 │   │       └── todo/
 │   │           ├── TodoUseCase.ts
 │   │           └── UniversalTodoRepo.ts
 │   │
-│   └── test/                         # 🆕 ローカル専用テスト
-│       ├── setup.ts                  # .env読み込み
-│       ├── vitest.config.ts
-│       └── features/
-│           └── todo/
-│               └── TodoUseCase.test.ts
+│   └── test/                     # 🆕 Local-only tests
+│       ├── setup.ts
+│       └── features/todo/
+│           └── TodoUseCase.test.ts
 │
-├── test-projects/                    # 🆕 検証環境
-│   └── todo-app/                     # 実E2Eテスト用
-│       └── (wyside init で生成)
+├── test-projects/                # 🆕 Validation env
+│   └── todo-app/
 │
-└── src/                              # 既存CLI
-    ├── app.ts                        # 🔄 MCP統合追加
-    ├── config.ts                     # 🔄 configForTodoRest追加
-    ├── mcp-setup.ts                  # 🆕 MCPヘルパー
-    └── ...
+└── src/                          # Existing CLI
+    ├── app.ts                    # 🔄 MCP integration
+    ├── config.ts                 # 🔄 configForTodoRest
+    └── mcp-setup.ts              # 🆕
 ```
 
-### 2. `template/` 詳細構成 (Test-Separated Hybrid)
+### template/ Test-Separated Hybrid Structure
 
 ```text
 template/
 │
-├── 🔧 設定ファイル群
-│   ├── .clasp.json              # rootIDのみ、src/をデプロイ対象に
-│   ├── .claspignore             # test/, mcp-server/, secrets/ 除外
-│   ├── appsscript.json          # Advanced Services: Sheets v4有効化
-│   ├── .env.example             # SPREADSHEET_ID, GCP_PROJECT_ID等
-│   ├── .gitignore               # secrets/, .env 除外
-│   ├── package.json             # googleapis等の依存関係
-│   ├── tsconfig.json            # ES2020, strict
-│   └── vitest.config.ts         # テスト設定
+├── 🔧 Config Files
+│   ├── .clasp.json          # rootID + src/ deploy
+│   ├── .claspignore         # Exclude: test/, secrets/, mcp-server/
+│   ├── appsscript.json      # Advanced Services: Sheets v4
+│   ├── .env.example         # SPREADSHEET_ID, GCP_PROJECT_ID
+│   ├── .gitignore           # secrets/, .env
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vitest.config.ts
 │
-├── 🔐 secrets/                  # Local専用（.gitignore）
-│   ├── .gitkeep
-│   └── service-account.json     # GCP Service Account鍵
+├── 🔐 secrets/              # Local-only (gitignored)
+│   └── service-account.json
 │
-├── 🚀 src/                      # GAS本番コード（.claspでデプロイ）
-│   │
-│   ├── main.ts                  # GASエントリーポイント
-│   │   • function onOpen()      → メニュー追加
-│   │   • function doGet()       → Web App
-│   │   • function apiAddTodo()  → google.script.run経由API
-│   │   • function apiListTodos()
-│   │   • function apiToggleTodo()
-│   │
-│   ├── core/                    # 基盤層
-│   │   │
-│   │   ├── client.ts            # 💜 Universal Sheets Client
-│   │   │   • class UniversalSheetsClient
-│   │   │   • detectEnvironment(): 'gas' | 'node'
-│   │   │   • batchUpdate(spreadsheetId, requests)
-│   │   │   • batchGet(spreadsheetId, ranges)
-│   │   │   • getNodeAuth()      → Service Account認証
-│   │   │   • gasRequest()       → UrlFetchApp実装
-│   │   │
-│   │   ├── auth.ts              # 認証ヘルパー
-│   │   │   • getGasToken()      → ScriptApp.getOAuthToken()
-│   │   │   • getLocalAuth()     → GoogleAuth from JSON
-│   │   │
-│   │   ├── types.ts             # 共通型定義
-│   │   │   • type Todo = { id, title, completed, createdAt, updatedAt }
-│   │   │   • type SheetsRequest = ...
-│   │   │
-│   │   └── constants.ts         # 名前付き範囲定数
-│   │       • export const TODO_RANGE = 'Todos!A2:E'
-│   │
-│   └── features/                # 機能層（ドメイン駆動設計）
-│       │
-│       └── todo/
-│           │
-│           ├── TodoUseCase.ts   # ビジネスロジック
-│           │   • addTodo(title): Promise<void>
-│           │   • listTodos(): Promise<Todo[]>
-│           │   • toggleTodo(id): Promise<void>
-│           │   • deleteTodo(id): Promise<void>
-│           │
-│           └── UniversalTodoRepo.ts  # 💜 REST API統一実装
-│               • constructor(spreadsheetId)
-│               • addTodo(title)      → appendCells API
-│               • getTodos()          → batchGet API
-│               • updateTodo(id, updates) → updateCells API
-│               • deleteTodo(id)      → deleteDimension API
-│               • private parseRows() → APIレスポンス→Todo変換
+├── 🚀 src/                  # GAS Production (.clasp deploy)
+│   ├── main.ts              # Entry: onOpen(), doGet(), api*()
+│   ├── core/
+│   │   ├── client.ts        # 💜 Universal Sheets Client
+│   │   ├── auth.ts
+│   │   ├── types.ts         # Todo interface
+│   │   └── constants.ts     # TODO_RANGE
+│   └── features/todo/
+│       ├── TodoUseCase.ts   # Business logic
+│       └── UniversalTodoRepo.ts  # 💜 REST API unified
 │
-└── ✅ test/                     # Local専用テスト（.claspignoreで除外）
-    │
-    ├── setup.ts                 # テスト前処理
-    │   • dotenv.config()        → .env読み込み
-    │   • 環境変数バリデーション
-    │
-    ├── vitest.config.ts
-    │
-    └── features/
-        └── todo/
-            └── TodoUseCase.test.ts  # 結合テスト
-                • describe('TodoUseCase Integration')
-                • it('should add and retrieve todo')
-                • it('should toggle completion')
-                • it('should delete todo')
-                • 実Spreadsheet使用（TEST_SPREADSHEET_ID）
+└── ✅ test/                 # Local-only (.claspignore)
+    ├── setup.ts             # dotenv + validation
+    └── features/todo/
+        └── TodoUseCase.test.ts  # Integration tests
 ```
 
 ---
 
-## 🔧 Phase 1: テンプレート基盤構築
+## Phase 1: Template Foundation
 
-### 目標
+### Objectives
 
-Test-Separated Hybrid 構成のテンプレート作成 + Universal Client 実装
+Build Test-Separated Hybrid template + Universal Client
 
-### タスク
+### Tasks
 
-#### 1.1 設定ファイル群作成
+#### 1.1 Config Files
 
-**`template/.clasp.json`**
+**`.clasp.json`**
 
 ```json
-{
-  "scriptId": "",
-  "rootDir": "./src",
-  "parentId": []
-}
+{ "scriptId": "", "rootDir": "./src", "parentId": [] }
 ```
 
-**`template/.claspignore`**
+**`.claspignore`**
 
 ```text
 **/**
@@ -290,21 +202,16 @@ node_modules/**
 .env
 ```
 
-**`template/appsscript.json`**
+**`appsscript.json`**
 
 ```json
 {
   "timeZone": "Asia/Tokyo",
   "dependencies": {
     "enabledAdvancedServices": [
-      {
-        "userSymbol": "Sheets",
-        "serviceId": "sheets",
-        "version": "v4"
-      }
+      { "userSymbol": "Sheets", "serviceId": "sheets", "version": "v4" }
     ]
   },
-  "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "oauthScopes": [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -313,36 +220,28 @@ node_modules/**
 }
 ```
 
-**`template/.env.example`**
+**`.env.example`**
 
 ```bash
-# Google Cloud Project
 GCP_PROJECT_ID=your-gcp-project-id
-
-# Spreadsheet ID（スプレッドシートURLの/d/xxx/の部分）
 SPREADSHEET_ID=your-spreadsheet-id
 TEST_SPREADSHEET_ID=your-test-spreadsheet-id
-
-# Service Account認証鍵のパス
 GOOGLE_APPLICATION_CREDENTIALS=./secrets/service-account.json
 ```
 
-**`template/.gitignore`**（既存に追加）
+**`.gitignore`** (additions)
 
 ```gitignore
-# Secrets
 secrets/
 *.json
 !package.json
 !tsconfig.json
 !appsscript.json
-
-# Environment
 .env
 .env.local
 ```
 
-**`template/vitest.config.ts`**
+**`vitest.config.ts`**
 
 ```typescript
 import { defineConfig } from 'vitest/config';
@@ -361,9 +260,9 @@ export default defineConfig({
 });
 ```
 
-#### 1.2 Universal Client 実装
+#### 1.2 Universal Client
 
-**`template/src/core/client.ts`**
+**`src/core/client.ts`**
 
 ```typescript
 /**
@@ -382,35 +281,22 @@ export class UniversalSheetsClient {
   }
 
   private detectEnvironment(): Environment {
-    // GAS環境: UrlFetchAppが存在
-    // Node環境: process.versionが存在
     return typeof UrlFetchApp !== 'undefined' ? 'gas' : 'node';
   }
 
-  /**
-   * Sheets API v4 batchUpdate実行
-   */
   async batchUpdate(spreadsheetId: string, requests: any[]): Promise<any> {
-    if (this.env === 'gas') {
-      return this.gasBatchUpdate(spreadsheetId, requests);
-    } else {
-      return this.nodeBatchUpdate(spreadsheetId, requests);
-    }
+    return this.env === 'gas'
+      ? this.gasBatchUpdate(spreadsheetId, requests)
+      : this.nodeBatchUpdate(spreadsheetId, requests);
   }
 
-  /**
-   * Sheets API v4 batchGet実行
-   */
   async batchGet(spreadsheetId: string, ranges: string[]): Promise<any> {
-    if (this.env === 'gas') {
-      return this.gasBatchGet(spreadsheetId, ranges);
-    } else {
-      return this.nodeBatchGet(spreadsheetId, ranges);
-    }
+    return this.env === 'gas'
+      ? this.gasBatchGet(spreadsheetId, ranges)
+      : this.nodeBatchGet(spreadsheetId, ranges);
   }
 
-  // === GAS環境実装 ===
-
+  // === GAS Implementation ===
   private gasBatchUpdate(spreadsheetId: string, requests: any[]): any {
     const token = ScriptApp.getOAuthToken();
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
@@ -426,13 +312,11 @@ export class UniversalSheetsClient {
     });
 
     const result = JSON.parse(response.getContentText());
-
     if (response.getResponseCode() !== 200) {
       throw new Error(
-        `Sheets API Error: ${result.error?.message || 'Unknown error'}`
+        `Sheets API Error: ${result.error?.message || 'Unknown'}`
       );
     }
-
     return result;
   }
 
@@ -445,17 +329,14 @@ export class UniversalSheetsClient {
 
     const response = UrlFetchApp.fetch(url, {
       method: 'get',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       muteHttpExceptions: true,
     });
 
     return JSON.parse(response.getContentText());
   }
 
-  // === Node.js環境実装 ===
-
+  // === Node.js Implementation ===
   private async nodeBatchUpdate(
     spreadsheetId: string,
     requests: any[]
@@ -468,7 +349,6 @@ export class UniversalSheetsClient {
       spreadsheetId,
       requestBody: { requests },
     });
-
     return response.data;
   }
 
@@ -484,7 +364,6 @@ export class UniversalSheetsClient {
       spreadsheetId,
       ranges,
     });
-
     return response.data;
   }
 
@@ -508,7 +387,7 @@ export class UniversalSheetsClient {
 }
 ```
 
-**`template/src/core/types.ts`**
+**`src/core/types.ts`**
 
 ```typescript
 /**
@@ -534,7 +413,7 @@ export interface SheetsApiResponse {
 }
 ```
 
-**`template/src/core/constants.ts`**
+**`src/core/constants.ts`**
 
 ```typescript
 /**
@@ -542,37 +421,29 @@ export interface SheetsApiResponse {
  * Licensed under the Apache License, Version 2.0
  */
 
-// 名前付き範囲定数
 export const TODO_RANGE = 'Todos!A2:E';
 export const TODO_HEADER_RANGE = 'Todos!A1:E1';
-
-// シート名
-export const SHEET_NAMES = {
-  TODOS: 'Todos',
-} as const;
+export const SHEET_NAMES = { TODOS: 'Todos' } as const;
 ```
 
-### 成果物チェックリスト
+### Deliverables
 
-- [ ] `.clasp.json`, `.claspignore`, `appsscript.json`作成
-- [ ] `.env.example`, `.gitignore`更新
-- [ ] `vitest.config.ts`作成
-- [ ] `src/core/client.ts` (Universal Client) 実装
-- [ ] `src/core/types.ts`作成
-- [ ] `src/core/constants.ts`作成
-- [ ] `secrets/.gitkeep`作成
+- [ ] Config files: `.clasp.json`, `.claspignore`, `appsscript.json`, `.env.example`, `.gitignore`, `vitest.config.ts`
+- [ ] `src/core/client.ts` (Universal Client)
+- [ ] `src/core/types.ts`, `src/core/constants.ts`
+- [ ] `secrets/.gitkeep`
 
 ---
 
-## 🤖 Phase 2: MCP Server 統合
+## Phase 2: MCP Server Integration
 
-### Phase 2 の目標
+### Objectives
 
-wyside プロジェクトに MCP Server 機能を追加し、AI 駆動の自動化ツールを提供
+Add MCP Server for AI-driven automation
 
-### Phase 2 のタスク
+### Tasks
 
-#### 2.1 MCP サーバー初期構築
+#### 2.1 MCP Server Setup
 
 **`mcp-server/package.json`**
 
@@ -581,7 +452,6 @@ wyside プロジェクトに MCP Server 機能を追加し、AI 駆動の自動�
   "name": "@wywyjp/wyside-mcp",
   "version": "1.0.0",
   "type": "module",
-  "description": "MCP Server for wyside - AI-driven GAS scaffolding tools",
   "main": "build/index.js",
   "scripts": {
     "build": "tsc",
@@ -623,7 +493,7 @@ wyside プロジェクトに MCP Server 機能を追加し、AI 駆動の自動�
 }
 ```
 
-#### 2.2 MCP Server Core 実装
+#### 2.2 MCP Server Core
 
 **`mcp-server/src/index.ts`**
 
@@ -642,87 +512,72 @@ import { scaffoldFeature } from './tools/scaffold-feature.js';
 import { setupNamedRange } from './tools/setup-named-range.js';
 
 const server = new Server(
-  {
-    name: 'wyside-mcp',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
+  { name: 'wyside-mcp', version: '1.0.0' },
+  { capabilities: { tools: {} } }
 );
 
-// ツール一覧登録
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: 'sync_local_secrets',
-        description:
-          'GCPプロジェクト設定、API有効化、Service Account作成を自動実行し、ローカル環境でSheets APIを使える状態にする',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            projectId: {
-              type: 'string',
-              description: 'GCPプロジェクトID（省略時は対話的に選択）',
-            },
-            spreadsheetId: {
-              type: 'string',
-              description: 'スプレッドシートID（省略時は新規作成）',
-            },
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: 'sync_local_secrets',
+      description:
+        'Auto-configure GCP project, enable APIs, create Service Account, prepare local Sheets API access',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          projectId: {
+            type: 'string',
+            description: 'GCP Project ID (interactive if omitted)',
+          },
+          spreadsheetId: {
+            type: 'string',
+            description: 'Spreadsheet ID (creates new if omitted)',
           },
         },
       },
-      {
-        name: 'scaffold_feature',
-        description:
-          'REST API統一実装のリポジトリクラスを生成（GAS/Local両対応）',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            featureName: {
-              type: 'string',
-              description: '機能名（例: "Highlight", "DataValidation"）',
-            },
-            operations: {
-              type: 'array',
-              items: { type: 'string' },
-              description: '操作内容（例: ["setBackground", "setBorder"]）',
-            },
+    },
+    {
+      name: 'scaffold_feature',
+      description: 'Generate REST API unified repository (GAS/Local dual-mode)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          featureName: {
+            type: 'string',
+            description: 'Feature name (e.g., "Highlight")',
           },
-          required: ['featureName', 'operations'],
-        },
-      },
-      {
-        name: 'setup_named_range',
-        description:
-          'スプレッドシートに名前付き範囲を設定し、コード内定数と同期',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            spreadsheetId: {
-              type: 'string',
-              description: 'スプレッドシートID',
-            },
-            rangeName: {
-              type: 'string',
-              description: '名前付き範囲の名前（例: "TODO_RANGE"）',
-            },
-            range: {
-              type: 'string',
-              description: 'A1記法の範囲（例: "Todos!A2:E"）',
-            },
+          operations: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Operations (e.g., ["setBackground"])',
           },
-          required: ['spreadsheetId', 'rangeName', 'range'],
         },
+        required: ['featureName', 'operations'],
       },
-    ],
-  };
-});
+    },
+    {
+      name: 'setup_named_range',
+      description:
+        'Configure named ranges in spreadsheet and sync with code constants',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          spreadsheetId: { type: 'string' },
+          rangeName: {
+            type: 'string',
+            description: 'Range name (e.g., "TODO_RANGE")',
+          },
+          range: {
+            type: 'string',
+            description: 'A1 notation (e.g., "Todos!A2:E")',
+          },
+        },
+        required: ['spreadsheetId', 'rangeName', 'range'],
+      },
+    },
+  ],
+}));
 
-// ツール実行ハンドラ
 server.setRequestHandler(CallToolRequestSchema, async request => {
   const { name, arguments: args } = request.params;
 
@@ -730,13 +585,10 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
     switch (name) {
       case 'sync_local_secrets':
         return await syncLocalSecrets(args);
-
       case 'scaffold_feature':
         return await scaffoldFeature(args);
-
       case 'setup_named_range':
         return await setupNamedRange(args);
-
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -763,25 +615,25 @@ async function main() {
 main().catch(console.error);
 ```
 
-#### 2.3 Tool 実装: sync_local_secrets (概要のみ)
+#### 2.3 Tool: sync_local_secrets (Outline)
 
 **`mcp-server/src/tools/sync-local-secrets.ts`**
 
-実装概要:
+Implementation steps:
 
-1. `gcloud auth login`で認証確認
-2. GCP プロジェクト選択/作成
-3. `gcloud services enable sheets.googleapis.com`
-4. Service Account 作成 & 鍵ダウンロード
-5. `secrets/service-account.json`配置
-6. Spreadsheet 作成 or 共有設定
-7. `.env`ファイル生成
+1. Verify `gcloud auth login`
+2. Select/create GCP project
+3. Enable `sheets.googleapis.com`
+4. Create Service Account & download key
+5. Place `secrets/service-account.json`
+6. Create or configure Spreadsheet sharing
+7. Generate `.env` file
 
-※詳細実装は実装時にドキュメント参照
+_(Full implementation to be documented during Phase 2 execution)_
 
-#### 2.4 CLI 統合
+#### 2.4 CLI Integration
 
-**`src/mcp-setup.ts`** (新規作成)
+**`src/mcp-setup.ts`** (new)
 
 ```typescript
 import { spawn } from 'cross-spawn';
@@ -789,128 +641,119 @@ import path from 'path';
 
 export function startMcpServer(): void {
   const mcpPath = path.join(__dirname, '../mcp-server/build/index.js');
-
-  const proc = spawn('node', [mcpPath], {
-    stdio: 'inherit',
-  });
-
-  proc.on('exit', code => {
-    process.exit(code || 0);
-  });
+  const proc = spawn('node', [mcpPath], { stdio: 'inherit' });
+  proc.on('exit', code => process.exit(code || 0));
 }
 ```
 
-**`src/app.ts`** (既存に追加)
+**`src/app.ts`** (extend)
 
 ```typescript
 import { startMcpServer } from './mcp-setup.js';
 
-// 既存のinit関数を拡張
 export async function init(options: InitOptions) {
-  // ... 既存のテンプレートコピー処理 ...
+  // ... existing template copy ...
 
-  // 新規: GCP自動セットアップオプション
   if (options.setupGcp) {
     console.log('🤖 Running GCP setup via MCP...');
-    // MCPツールを直接呼び出す実装
-    // または `wyside mcp` を子プロセスで実行
+    // Invoke MCP tool or spawn `wyside mcp`
   }
 }
 
-// 新規: mcpコマンド
 export function handleMcpCommand() {
   startMcpServer();
 }
 ```
 
-### Phase 2 の成果物チェックリスト
+### Deliverables
 
-- [ ] `mcp-server/package.json`, `tsconfig.json`作成
-- [ ] `mcp-server/src/index.ts` (MCP サーバーコア) 実装
-- [ ] `mcp-server/src/tools/sync-local-secrets.ts`実装
-- [ ] `mcp-server/src/tools/scaffold-feature.ts`実装（簡易版）
-- [ ] `mcp-server/src/tools/setup-named-range.ts`実装（簡易版）
-- [ ] `src/mcp-setup.ts`作成
-- [ ] `src/app.ts`に MCP 統合追加
-- [ ] `npm install`で MCP 依存関係追加
+- [ ] `mcp-server/package.json`, `tsconfig.json`
+- [ ] `mcp-server/src/index.ts`
+- [ ] `mcp-server/src/tools/sync-local-secrets.ts`
+- [ ] `mcp-server/src/tools/scaffold-feature.ts` (minimal)
+- [ ] `mcp-server/src/tools/setup-named-range.ts` (minimal)
+- [ ] `src/mcp-setup.ts`
+- [ ] `src/app.ts` MCP integration
 
 ---
 
-## 💜 Phase 3: TODO App 完全実装
+## Phase 3: TODO App Implementation
 
-### Phase 3 の目標
+### Objectives
 
-REST API 統一の TODO アプリ（CRUD 操作）を GAS/Local 両対応で実装
+Implement REST API unified TODO app (CRUD) with GAS/Local dual-mode
 
-### Phase 3 のタスク
+### Tasks
 
-#### 3.1 UniversalTodoRepo 実装
+#### 3.1 UniversalTodoRepo
 
 **`template/src/features/todo/UniversalTodoRepo.ts`**
 
-主要メソッド:
+Key methods:
 
-- `addTodo(title)`: appendCells API で行追加
-- `getTodos()`: batchGet API で全データ取得
-- `updateTodo(id, updates)`: updateCells API で更新
-- `deleteTodo(id)`: deleteDimension API で削除
-- `parseRows()`: API レスポンスを Todo 型に変換
+- `addTodo(title)`: appendCells API
+- `getTodos()`: batchGet API
+- `updateTodo(id, updates)`: updateCells API
+- `deleteTodo(id)`: deleteDimension API
+- `parseRows()`: API response → Todo conversion
 
-#### 3.2 TodoUseCase 実装
+#### 3.2 TodoUseCase
 
 **`template/src/features/todo/TodoUseCase.ts`**
 
-ビジネスロジック:
+Business logic:
 
-- バリデーション（タイトル必須等）
-- エラーハンドリング
-- リポジトリ層の呼び出し
+- Validation (title required, etc.)
+- Error handling
+- Repository layer calls
 
-#### 3.3 GAS エントリーポイント実装
+#### 3.3 GAS Entry Point
 
 **`template/src/main.ts`**
 
-- `onOpen()`: メニュー追加
-- `showTodoUI()`: サイドバー表示
+Functions:
+
+- `onOpen()`: Add menu
+- `showTodoUI()`: Sidebar display
 - `apiAddTodo()`, `apiListTodos()`, `apiToggleTodo()`, `apiDeleteTodo()`
 
-### Phase 3 の成果物チェックリスト
+### Deliverables
 
-- [ ] `src/features/todo/UniversalTodoRepo.ts`実装
-- [ ] `src/features/todo/TodoUseCase.ts`実装
-- [ ] `src/main.ts`実装（onOpen, API 関数）
-- [ ] CRUD 操作の動作確認（手動テスト）
+- [ ] `src/features/todo/UniversalTodoRepo.ts`
+- [ ] `src/features/todo/TodoUseCase.ts`
+- [ ] `src/main.ts` (onOpen, API functions)
+- [ ] Manual CRUD operation verification
 
 ---
 
-## 🧪 Phase 4: テスト環境構築
+## Phase 4: Test Environment
 
-### Phase 4 の目標
+### Objectives
 
-ローカルで実 Spreadsheet を使った結合テストを実装
+Implement local integration tests using real Spreadsheet
 
-### Phase 4 のタスク
+### Tasks
 
-#### 4.1 テストセットアップ
+#### 4.1 Test Setup
 
 **`template/test/setup.ts`**
 
-- dotenv 読み込み
-- 環境変数バリデーション
+- dotenv loading
+- Environment variable validation
 
-#### 4.2 結合テスト実装
+#### 4.2 Integration Tests
 
 **`template/test/features/todo/TodoUseCase.test.ts`**
 
-テストケース:
+Test cases:
 
-- `addTodo`: 正常系、バリデーションエラー
-- `listTodos`: 空配列、複数件
-- `toggleTodo`: 完了状態切り替え、エラー
-- `deleteTodo`: 削除、エラー
-- 完全な CRUD サイクル
+- `addTodo`: Success, validation error
+- `listTodos`: Empty array, multiple records
+- `toggleTodo`: Toggle completion, error
+- `deleteTodo`: Delete, error
+- Full CRUD cycle
 
-#### 4.3 package.json 更新
+#### 4.3 package.json Scripts
 
 ```json
 {
@@ -923,54 +766,54 @@ REST API 統一の TODO アプリ（CRUD 操作）を GAS/Local 両対応で実�
 }
 ```
 
-### Phase 4 の成果物チェックリスト
+### Deliverables
 
-- [ ] `test/setup.ts`実装
-- [ ] `test/features/todo/TodoUseCase.test.ts`実装
-- [ ] `vitest.config.ts`設定
-- [ ] `package.json`のテストスクリプト追加
-- [ ] ローカルテスト実行確認（`npm test`）
+- [ ] `test/setup.ts`
+- [ ] `test/features/todo/TodoUseCase.test.ts`
+- [ ] `vitest.config.ts` configuration
+- [ ] Test scripts in `package.json`
+- [ ] Local test execution (`npm test`)
 
 ---
 
-## 🚀 Phase 5: 検証環境構築と E2E テスト
+## Phase 5: E2E Validation
 
-### Phase 5 の目標
+### Objectives
 
-`test-projects/todo-app/`で wyside の完全な動作検証
+Complete wyside validation in `test-projects/todo-app/`
 
-### Phase 5 のタスク
+### Tasks
 
-#### 5.1 検証プロジェクト作成手順
+#### 5.1 Validation Project Procedure
 
-1. `npm run build` (wyside ビルド)
+1. `npm run build` (wyside build)
 2. `mkdir -p test-projects/todo-app`
 3. `npx ../../dist/index.js init --setup-gcp --yes`
 4. `npm install`
-5. `npm test` (ローカルテスト)
-6. `npm run deploy` (GAS デプロイ)
-7. GAS UI 動作確認
+5. `npm test` (local tests)
+6. `npm run deploy` (GAS deploy)
+7. GAS UI verification
 
-#### 5.2 ドキュメント作成
+#### 5.2 Documentation
 
 **`docs/testing-guide.md`**
 
-- E2E テスト完全手順書
-- トラブルシューティング
-- 検証ポイント
+- Complete E2E test procedure
+- Troubleshooting
+- Verification checklist
 
-### Phase 5 の成果物チェックリスト
+### Deliverables
 
-- [ ] `test-projects/todo-app/`ディレクトリ作成
-- [ ] `wyside init --setup-gcp`実行成功
-- [ ] `npm test`でローカルテスト全件 PASS
-- [ ] `npm run deploy`で GAS デプロイ成功
-- [ ] GAS UI で TODO 操作動作確認
-- [ ] `docs/testing-guide.md`作成
+- [ ] `test-projects/todo-app/` directory
+- [ ] `wyside init --setup-gcp` success
+- [ ] `npm test` all tests PASS
+- [ ] `npm run deploy` GAS deploy success
+- [ ] GAS UI TODO operations verified
+- [ ] `docs/testing-guide.md`
 
 ---
 
-## 📦 Phase 6: 依存関係とビルド設定
+## Phase 6: Dependencies & Build Config
 
 ### template/package.json
 
@@ -991,7 +834,7 @@ REST API 統一の TODO アプリ（CRUD 操作）を GAS/Local 両対応で実�
 }
 ```
 
-### src/config.ts 更新
+### src/config.ts Update
 
 ```typescript
 export const configForTodoRest = {
@@ -1000,59 +843,46 @@ export const configForTodoRest = {
     'google-auth-library@^9.14.1',
     'dotenv@^16.4.5',
   ],
-  // ... (省略)
+  // ...
 };
 ```
 
 ---
 
-## 📝 Phase 7: ドキュメント整備
+## Phase 7: Documentation
 
-### ドキュメント一覧
+### Document List
 
-| ファイル                      | 内容                                 |
-| ----------------------------- | ------------------------------------ |
-| `docs/implementation-plan.md` | 本ドキュメント（実装計画）           |
-| `docs/testing-guide.md`       | E2E テスト手順書                     |
-| `docs/mcp-tools-reference.md` | MCP ツールリファレンス               |
-| `template/README.md`          | テンプレート利用者向けガイド         |
-| `CLAUDE.md`                   | プロジェクト概要更新（MCP 統合追記） |
-
----
-
-## 🎯 実装マイルストーン
-
-### Milestone 1: 基盤構築 (3-5 日)
-
-- [ ] テンプレート構造作成
-- [ ] Universal Client 実装
-- [ ] 設定ファイル群作成
-
-### Milestone 2: MCP 統合 (5-7 日)
-
-- [ ] MCP サーバー構築
-- [ ] GCP 自動化ツール実装
-- [ ] CLI 統合
-
-### Milestone 3: TODO App 実装 (3-4 日)
-
-- [ ] CRUD 操作実装
-- [ ] GAS エントリーポイント実装
-
-### Milestone 4: テスト環境 (2-3 日)
-
-- [ ] 結合テスト実装
-- [ ] Vitest 設定
-
-### Milestone 5: E2E 検証 (2-3 日)
-
-- [ ] 完全動作確認
-- [ ] 両環境での動作検証
-
-### Milestone 6: ドキュメント (1-2 日)
-
-- [ ] 全ドキュメント整備
-
-**総推定工数**: 14-21 日（1 人フルタイム換算）
+```yaml
+docs/implementation-plan.md: Implementation plan (this doc)
+docs/testing-guide.md: E2E test procedure
+docs/mcp-tools-reference.md: MCP tools reference
+template/README.md: Template user guide
+CLAUDE.md: Project overview (add MCP integration notes)
+```
 
 ---
+
+## Implementation Milestones
+
+```yaml
+m1_foundation: # 3-5 days
+  tasks: [Template structure, Universal Client, Config files]
+
+m2_mcp_integration: # 5-7 days
+  tasks: [MCP server, GCP automation, CLI integration]
+
+m3_todo_app: # 3-4 days
+  tasks: [CRUD operations, GAS entry point]
+
+m4_test_env: # 2-3 days
+  tasks: [Integration tests, Vitest config]
+
+m5_e2e_validation: # 2-3 days
+  tasks: [Full verification, dual-env testing]
+
+m6_documentation: # 1-2 days
+  tasks: [Complete all docs]
+
+total_estimate: 14-21 days (1 FTE)
+```
