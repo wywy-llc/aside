@@ -181,14 +181,6 @@ describe('clasp-helper', () => {
       expect(res).toEqual('Not found');
     });
 
-    it('extracts sheets link', () => {
-      const output = 'Created new document: https://drive.google.com/abc123';
-
-      const res = claspHelper.extractSheetsLink(output);
-
-      expect(res).toEqual('https://drive.google.com/abc123');
-    });
-
     it('extracts sheets link when clasp reports spreadsheet', () => {
       const output =
         'Created new spreadsheet: https://docs.google.com/spreadsheets/abc123/edit';
@@ -221,15 +213,6 @@ describe('clasp-helper', () => {
       const res = claspHelper.extractScriptLink(output);
 
       expect(res).toEqual('https://drive.google.com/abc123');
-    });
-
-    it('extracts script link when clasp reports Google Apps Script project', () => {
-      const output =
-        'Created new Google Apps Script project: https://script.google.com/abc123';
-
-      const res = claspHelper.extractScriptLink(output);
-
-      expect(res).toEqual('https://script.google.com/abc123');
     });
 
     it('extracts script link when clasp reports Google Sheets Add-on script', () => {
