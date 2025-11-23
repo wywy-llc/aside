@@ -146,6 +146,13 @@ wyside/
 - **Spreadsheet IDs:** MUST use `src/config.ts` with `SpreadsheetType` enum and `APP_SPREADSHEET_ID_N_DEV/PROD` environment variables
 - **NO hardcoded IDs** in code
 - **Environment Detection:** Use `UniversalSheetsClient` pattern to detect Node.js vs GAS runtime
+- **API Permissions (`appsscript.json`):**
+  - Template includes Sheets, Drive, and Gmail API permissions
+  - Gmail API: Works in GAS runtime with OAuth scopes. For local development, Service Accounts require Domain-Wide Delegation (Google Workspace) or OAuth 2.0 user flow (personal accounts)
+- **Service Account Sharing:**
+  - Service Account keys (`service-account.json`) can be shared among team members for local development
+  - Share via secure channels (encrypted messaging, password managers). Never commit to git
+  - Recommended: Use separate Service Accounts for dev/staging/prod environments
 
 ## 7. MCP Integration (New)
 

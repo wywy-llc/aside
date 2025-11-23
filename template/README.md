@@ -26,7 +26,10 @@ If you are setting this up from scratch, follow these steps to obtain the necess
 2. Create a new project (or select an existing one).
 3. Note the **Project ID** (e.g., `my-project-123`). This is your `GCP_PROJECT_ID`.
 4. Navigate to **APIs & Services > Library**.
-5. Search for and enable the **Google Sheets API**.
+5. Search for and enable the following APIs:
+   - **Google Sheets API**
+   - **Google Drive API**
+   - **Gmail API**
 
 ### 2. Service Account (For Local Execution)
 
@@ -45,6 +48,12 @@ If you are setting this up from scratch, follow these steps to obtain the necess
    ```
 
    _(Note: `secrets/` is git-ignored by default to prevent accidental commits)_
+
+**Note about Gmail API:**
+
+- For Gmail API access with a Service Account, you typically need **Domain-Wide Delegation** enabled if you're using Google Workspace.
+- For personal Gmail accounts, Service Accounts cannot directly access user emails. Consider using OAuth 2.0 user authentication instead.
+- The current setup in `appsscript.json` includes Gmail API permissions for GAS runtime. For local development with Gmail, you may need to implement OAuth 2.0 flow.
 
 ### 3. Spreadsheets Setup
 
