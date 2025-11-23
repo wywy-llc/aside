@@ -1,24 +1,12 @@
-<!--
-Copyright 2025 wywy LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-you may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
 <!DOCTYPE html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GAS開発ターボ化計画：AIネイティブ・ユニファイドアーキテクチャ</title>
+    <title>
+      GAS開発ターボ化計画 v3.2 (Plan
+      B)：AIネイティブ・ユニファイドアーキテクチャ
+    </title>
     <style>
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -140,6 +128,12 @@ limitations under the License.
       .tag-arch {
         background-color: #fff8e1;
         color: #f57f17;
+      }
+      .tag-file {
+        background-color: #eee;
+        color: #333;
+        font-family: monospace;
+        border: 1px solid #ccc;
       }
 
       table {
@@ -422,11 +416,35 @@ limitations under the License.
       .type {
         color: #4ec9b0;
       }
+
+      /* Directory Structure Styles */
+      .dir-tree {
+        background: #282c34;
+        color: #abb2bf;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.85em;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+      }
+      .dir-comment {
+        color: #5c6370;
+        font-style: italic;
+      }
+      .dir-highlight {
+        color: #e06c75;
+        font-weight: bold;
+      }
+      .dir-folder {
+        color: #61afef;
+      }
     </style>
   </head>
   <body>
     <h1>
-      GAS開発ターボ化計画 v3.1 (Plan
+      GAS開発ターボ化計画 v3.2 (Plan
       B)：AIネイティブ・ユニファイドアーキテクチャ
     </h1>
 
@@ -444,34 +462,44 @@ limitations under the License.
           >「1つのコードで、ローカル実行も本番実行も完全に同じ挙動」</strong
         >を実現します。
       </p>
+      <div class="highlight-box">
+        <span class="highlight-title"
+          >Core Concept: AI-Managed Infrastructure</span
+        >
+        人間はロジックだけを指示し、MCPが「ローカルでもGASでも動くユニバーサルなコード」を生成する。
+      </div>
     </div>
 
     <div class="section">
       <h2>2. 解決する課題とメリット</h2>
       <div class="merit-grid">
         <div class="merit-card">
-          <span class="tag tag-platform">Platform</span>
-          <span class="merit-icon">💰</span>
-          <h3>完全無料 & サーバーレス</h3>
-          <p>
-            Googleの強力なインフラを使い、サーバー代ゼロでスケーラブルなアプリを運用。
-          </p>
-        </div>
-        <div class="merit-card">
           <span class="tag tag-arch">Architecture</span>
-          <span class="merit-icon">🛡️</span>
-          <h3>名前付き範囲による堅牢化</h3>
+          <span class="merit-icon">💎</span>
+          <h3>Single Source of Truth</h3>
           <p>
-            「C列」のような位置指定を禁止。AIが対話的に「名前付き範囲」を設定し、列の移動や挿入があっても壊れないコードを保証します。
+            GAS用とLocal用の実装を分ける必要はありません。 REST
+            APIベースの単一コードにより、ローカルテストでの「書式設定」や「セルの結合」までもが本番と完全に一致します。
           </p>
         </div>
         <div class="merit-card">
           <span class="tag tag-tech">AI Agent</span>
           <span class="merit-icon">🤖</span>
-          <h3>AI自律開発</h3>
+          <h3>複雑性の隠蔽</h3>
           <p>
-            面倒な環境構築、REST
-            APIの複雑なJSON記述はAIにお任せ。人間は「ロジック」に集中。
+            人間が書くと数十行になる複雑なJSONリクエストも、AIなら一瞬で生成。
+            「書きにくさ」というREST
+            API最大のデメリットを、AIの力で無効化します。
+          </p>
+        </div>
+        <div class="merit-card">
+          <span class="tag tag-platform">Future Proof</span>
+          <span class="merit-icon">☁️</span>
+          <h3>クラウド移行も即座に</h3>
+          <p>
+            生成されるコードは標準的なGoogle APIクライアント準拠。
+            将来GASを離れて、Cloud RunやAWS
+            Lambdaへ移行する際も、コードをそのまま再利用可能です。
           </p>
         </div>
       </div>
@@ -680,6 +708,58 @@ limitations under the License.
         <code>.gitignore</code>
         に追加し、絶対にリポジトリにコミットしないでください。
       </div>
+    </div>
+
+    <div class="section">
+      <h2>6. 推奨ディレクトリ構成：Test-Separated Hybrid</h2>
+      <p>
+        Plan
+        Bの真価（ローカルでの完全動作再現）を活かすため、<strong>「本番コード(src)」と「検証コード(test)」をトップレベルで分離する構成</strong>を推奨します。
+        これにより、デプロイ時の事故を防ぎつつ、ローカルでは本物のスプレッドシートを使った結合テストが可能になります。
+      </p>
+
+      <div class="dir-tree">
+        root/ ├── .clasp.json
+        <span class="dir-comment"># GAS設定 (src/ のみをデプロイ対象に)</span>
+        ├── .claspignore
+        <span class="dir-comment"
+          ># 重要: src/ 以外(test, mcp等)を全て除外</span
+        >
+        ├── secrets/ <span class="dir-comment"># 🔐 [Local専用] 認証鍵</span> │
+        └── service-account.json │ ├──
+        <span class="dir-folder">mcp-server/</span>
+        <span class="dir-comment"># 🤖 [AI領域] プロジェクト専用AIツール</span>
+        │ ├── src/ │ │ ├── tools/
+        <span class="dir-comment"># scaffold_unified 等の実装</span> │ │ └──
+        templates/
+        <span class="dir-comment"># REST API実装用のテンプレート</span> │ ├──
+        <span class="dir-folder">src/</span>
+        <span class="dir-comment"># 🚀 [GAS領域] 本番コード</span> │ ├── main.ts
+        <span class="dir-comment"># エントリーポイント</span> │ ├── core/
+        <span class="dir-comment"># 基盤コード</span> │ │ ├── client.ts
+        <span class="dir-comment"># 💜 Universal Client (環境スイッチ)</span> │
+        │ └── types.ts <span class="dir-comment"># 共通型定義</span> │ └──
+        features/ <span class="dir-comment"># 📦 機能単位</span> │ ├── sales/ │
+        │ ├── SalesUseCase.ts <span class="dir-comment"># ロジック</span> │ │
+        └── UniversalSalesRepo.ts
+        <span class="dir-comment"># 💜 REST API統一実装 (AI生成)</span> │ └──
+        inventory/ │ └── <span class="dir-folder">test/</span>
+        <span class="dir-comment"># ✅ [Local専用] 検証コード</span> ├──
+        setup.ts
+        <span class="dir-comment"># テスト前処理 (.env読み込み等)</span> └──
+        features/ <span class="dir-comment"># srcと対になる構造</span> ├──
+        sales/ │ └── SalesUseCase.test.ts
+        <span class="dir-comment"># 結合テスト</span>
+        └── inventory/
+      </div>
+
+      <p style="margin-top: 15px; font-size: 0.9em">
+        <span class="tag tag-file">.claspignore</span> の設定例：<br />
+        <code>**/**</code><br />
+        <code>!src/**</code><br />
+        <code>!appsscript.json</code><br />
+        （これにより、テストコードやAI用コードが誤って本番環境にアップロードされるのを防ぎます）
+      </p>
     </div>
 
     <div class="section">
