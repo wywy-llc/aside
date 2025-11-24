@@ -1,7 +1,6 @@
 import eslint from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
-import { defineConfig } from 'eslint/config';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
@@ -9,7 +8,7 @@ import tseslint from 'typescript-eslint';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export default defineConfig(
+export default [
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   prettierConfig,
@@ -67,5 +66,5 @@ export default defineConfig(
   },
   {
     ignores: ['node_modules/', 'dist/', 'build/'],
-  }
-);
+  },
+];
