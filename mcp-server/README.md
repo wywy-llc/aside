@@ -1,40 +1,40 @@
 # @wywyjp/wyside-mcp
 
-An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server for `wyside`.
-This server acts as an AI-driven infrastructure manager, automating the complex setup required for local Google Apps Script development.
+`wyside`用の[MCP (Model Context Protocol)](https://modelcontextprotocol.io/)サーバーです。
+このサーバーはAI駆動のインフラ管理ツールとして機能し、ローカルGoogle Apps Script開発に必要な複雑なセットアップを自動化します。
 
-## Features
+## 機能
 
-- **Infrastructure Automation**: Auto-configure GCP projects, enable APIs, and create Service Accounts.
-- **Unified Code Scaffolding**: Generate code that runs on both GAS and Node.js without modification.
-- **Sheet Configuration**: Manage Named Ranges via API and sync them with TypeScript constants.
+- **インフラ自動化**: GCPプロジェクトの自動設定、API有効化、サービスアカウントの作成
+- **統合コードスキャフォールディング**: GASとNode.jsの両方で変更なしに動作するコードを生成
+- **シート設定**: APIを介した名前付き範囲の管理とTypeScript定数との同期
 
-## Installation
+## インストール
 
 ```bash
 npm install
 npm run build
 ```
 
-## Usage
+## 使い方
 
-### Running the Server
+### サーバーの起動
 
-Start the MCP server:
+MCPサーバーを起動:
 
 ```bash
 npm start
 ```
 
-Or for development with auto-rebuild:
+開発モード（自動リビルド付き）:
 
 ```bash
 npm run dev
 ```
 
-### IDE Integration (e.g., Cursor, VS Code)
+### IDE統合 (Cursor、VS Codeなど)
 
-Add the following to your MCP configuration file:
+MCP設定ファイルに以下を追加:
 
 ```json
 {
@@ -47,94 +47,94 @@ Add the following to your MCP configuration file:
 }
 ```
 
-## Development & Debugging
+## 開発とデバッグ
 
-### Quick Start Check
+### クイックスタートチェック
 
-After installation, verify the server starts correctly:
+インストール後、サーバーが正しく起動するか確認:
 
 ```bash
 npm start
 ```
 
-Expected output:
+期待される出力:
 
 ```bash
 wyside MCP server running on stdio
 ```
 
-If you see this message, the server is running correctly and waiting for MCP client connections via stdio.
+このメッセージが表示されれば、サーバーは正常に動作しており、stdio経由でMCPクライアントからの接続を待機しています。
 
-### Debugging with Logs
+### ログによるデバッグ
 
-The server logs to stderr (not stdout, which is reserved for MCP JSON-RPC protocol). To see detailed logs:
+サーバーはstderr（MCP JSON-RPCプロトコル用に予約されているstdoutではない）にログを出力します。詳細なログを確認するには:
 
-1. **Check stderr output**: All `console.error()` calls go to stderr
-2. **Add debug logs**: Edit source files in `src/` and add `console.error('Debug:', data)`
-3. **Rebuild**: Run `npm run build` after code changes
+1. **stderrの出力を確認**: すべての`console.error()`呼び出しはstderrに出力されます
+2. **デバッグログを追加**: `src/`内のソースファイルを編集し、`console.error('Debug:', data)`を追加
+3. **リビルド**: コード変更後に`npm run build`を実行
 
-Example debug workflow:
+デバッグワークフローの例:
 
 ```bash
-# Terminal 1: Watch mode for auto-rebuild
+# ターミナル1: 自動リビルド用のウォッチモード
 npm run dev
 
-# Terminal 2: Test the server
+# ターミナル2: サーバーのテスト
 npm start
 ```
 
-### Testing with MCP Inspector
+### MCP Inspectorでのテスト
 
-Use the official MCP Inspector to test tools interactively:
+公式MCP Inspectorを使用してツールを対話的にテスト:
 
 ```bash
-# Install MCP Inspector globally
+# MCP Inspectorをグローバルにインストール
 npm install -g @modelcontextprotocol/inspector
 
-# Run inspector
+# インスペクターを実行
 mcp-inspector node build/index.js
 ```
 
-This opens a web UI where you can:
+これによりWeb UIが開き、以下が可能になります:
 
-- List available tools
-- Call tools with test parameters
-- Inspect request/response payloads
+- 利用可能なツールのリスト表示
+- テストパラメータでツールを呼び出し
+- リクエスト/レスポンスのペイロードを検査
 
-### Manual Tool Testing
+### 環境変数を使用した手動ツールテスト
 
-Test specific tools without an MCP client using environment variables:
+MCPクライアントなしで特定のツールをテスト:
 
-#### 1. Create a `.env` file
+#### 1. `.env`ファイルを作成
 
-Copy the example file and fill in your test values:
+サンプルファイルをコピーしてテスト値を入力:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+`.env`を編集:
 
 ```bash
-# Enable test mode
+# テストモードを有効化
 TEST_MODE=true
 
-# Test sync_local_secrets
+# sync_local_secretsのテスト
 TEST_PROJECT_ID=your-gcp-project-id
 TEST_SPREADSHEET_ID=your-spreadsheet-id-optional
 
-# Test scaffold_feature
+# scaffold_featureのテスト
 TEST_FEATURE_NAME=Todo
 TEST_FEATURE_OPERATIONS=create,read,update,delete
 ```
 
-#### 2. Run tests
+#### 2. テストを実行
 
 ```bash
 npm run build && npm start
 ```
 
-Expected output:
+期待される出力:
 
 ```bash
 🧪 Running in TEST MODE
@@ -148,28 +148,59 @@ Expected output:
 ✨ Test mode completed. Exiting...
 ```
 
-To go back to normal server mode, set `TEST_MODE=false` in `.env`.
+通常のサーバーモードに戻るには、`.env`で`TEST_MODE=false`に設定してください。
 
-### Common Issues
+### ツールの直接実行
 
-**Problem**: Server starts but IDE doesn't connect
+コマンドライン引数で個別のツールを直接実行:
 
-- **Solution**: Check the absolute path in your IDE's MCP config
-- **Verify**: Run `ls /absolute/path/to/mcp-server/build/index.js`
+```bash
+# 基本構文
+npm run test:tool <tool-name> [args...]
 
-**Problem**: Tool errors with Google APIs
+# 実行例:
+npm run test:tool sync_local_secrets my-project-123
+npm run test:tool scaffold_feature Todo "create,read,update,delete"
+npm run test:tool setup_named_range 1ABC123 TODO_RANGE "Sheet1!A2:E"
+npm run test:tool drive_create_folder "Test Folder"
+npm run test:tool gmail_send_email "test@example.com" "Subject" "Body"
+```
 
-- **Solution**: Ensure `service-account.json` exists in project root
-- **Check**: `ls ~/your-project/secrets/service-account.json`
+**利用可能なツール:**
 
-**Problem**: TypeScript errors during build
+- `sync_local_secrets <projectId> [spreadsheetId]`
+- `scaffold_feature <featureName> <operation1,operation2,...>`
+- `setup_named_range <spreadsheetId> <rangeName> <range>`
+- `drive_create_folder <folderName> [parentId]`
+- `gmail_send_email <to> <subject> <body>`
 
-- **Solution**: Check `node_modules` installation: `npm install`
-- **Verify**: `npx tsc --version` (should be 5.9.3+)
+**対話的ヘルプ:**
 
-### Environment Variables
+```bash
+npm run test:tool
+# 使用方法と例を表示
+```
 
-For debugging Google API calls, set these in your shell:
+### よくある問題
+
+**問題**: サーバーは起動するがIDEが接続しない
+
+- **解決策**: IDEのMCP設定で絶対パスを確認
+- **確認**: `ls /absolute/path/to/mcp-server/build/index.js`を実行
+
+**問題**: Google APIでツールエラーが発生
+
+- **解決策**: プロジェクトルートに`service-account.json`が存在することを確認
+- **確認**: `ls ~/your-project/secrets/service-account.json`
+
+**問題**: ビルド時にTypeScriptエラーが発生
+
+- **解決策**: `node_modules`のインストールを確認: `npm install`
+- **確認**: `npx tsc --version` (5.9.3以上であるべき)
+
+### 環境変数
+
+Google API呼び出しのデバッグには、シェルで以下を設定:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
@@ -177,29 +208,29 @@ export DEBUG=true
 npm start
 ```
 
-## Tools
+## ツール
 
 ### `sync_local_secrets`
 
-Sets up the local development environment by interacting with Google Cloud Platform.
+Google Cloud Platformと連携してローカル開発環境をセットアップします。
 
-- Checks/Enables `sheets.googleapis.com`.
-- Creates a Service Account (`wyside-local-dev`) if missing.
-- Generates `secrets/service-account.json`.
-- Updates `.env`.
+- `sheets.googleapis.com`のチェック/有効化
+- サービスアカウント(`wyside-local-dev`)が存在しない場合は作成
+- `secrets/service-account.json`を生成
+- `.env`を更新
 
 ### `scaffold_feature`
 
-Generates a new feature directory with the "Test-Separated Hybrid" architecture.
+「テスト分離ハイブリッド」アーキテクチャで新しいフィーチャーディレクトリを生成します。
 
-- **Input**: Feature name (e.g., "Todo"), Operations.
-- **Output**:
-  - `Universal<Name>Repo.ts`: REST API based repository.
-  - `<Name>UseCase.ts`: Business logic.
+- **入力**: フィーチャー名（例: "Todo"）、オペレーション
+- **出力**:
+  - `Universal<Name>Repo.ts`: REST APIベースのリポジトリ
+  - `<Name>UseCase.ts`: ビジネスロジック
 
 ### `setup_named_range`
 
-Configures a Named Range in the target Google Sheet and generates the corresponding TypeScript constant.
+対象のGoogleシートで名前付き範囲を設定し、対応するTypeScript定数を生成します。
 
-- **Input**: Spreadsheet ID, Range Name, A1 Notation.
-- **Output**: Updates Spreadsheet metadata and `src/core/constants.ts`.
+- **入力**: スプレッドシートID、範囲名、A1表記
+- **出力**: スプレッドシートのメタデータと`src/core/constants.ts`を更新
