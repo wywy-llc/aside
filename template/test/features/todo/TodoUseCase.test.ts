@@ -1,12 +1,9 @@
-import { SheetsClient, type SheetsClientInstance } from '@/core/client';
-import {
-  createTodoUseCase,
-  type TodoUseCase,
-} from '@/features/todo/TodoUseCase';
-import { UniversalTodoRepo } from '@/features/todo/UniversalTodoRepo';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { SheetsClient } from '@/core/client';
+import { TodoUseCase } from '@/features/todo/TodoUseCase';
+import { beforeAll, describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { Todo } from '@/core/types';
 
 const SPREADSHEET_ID = process.env.APP_SPREADSHEET_ID_1_DEV || '';
 
@@ -36,7 +33,7 @@ const SHOULD_RUN_TESTS =
 
 // Helper to check if a sheet exists
 async function sheetExists(
-  client: SheetsClientInstance,
+  client: typeof SheetsClient,
   spreadsheetId: string,
   sheetName: string
 ): Promise<boolean> {
@@ -53,7 +50,7 @@ async function sheetExists(
 
 // Helper to rename the first sheet to 'Todos' and add headers
 async function createSheet(
-  client: SheetsClientInstance,
+  client: typeof SheetsClient,
   spreadsheetId: string,
   sheetName: string
 ): Promise<void> {
@@ -99,31 +96,17 @@ async function createSheet(
 }
 
 describe('TodoUseCase Integration', () => {
-  let client: SheetsClientInstance;
-  let repo: UniversalTodoRepo;
-  let useCase: TodoUseCase;
-
   beforeAll(async () => {
     if (!SHOULD_RUN_TESTS) {
       return;
     }
 
     // Ensure Todos sheet exists
-    client = SheetsClient.create();
-    const exists = await sheetExists(client, SPREADSHEET_ID, 'Todos');
+    const exists = await sheetExists(SheetsClient, SPREADSHEET_ID, 'Todos');
     if (!exists) {
       console.log('Creating Todos sheet...');
-      await createSheet(client, SPREADSHEET_ID, 'Todos');
+      await createSheet(SheetsClient, SPREADSHEET_ID, 'Todos');
     }
-  });
-
-  beforeEach(async () => {
-    if (!SHOULD_RUN_TESTS) {
-      return;
-    }
-    client = SheetsClient.create();
-    repo = new UniversalTodoRepo(client, SPREADSHEET_ID);
-    useCase = createTodoUseCase(repo);
   });
 
   it('should add and retrieve a todo', async () => {
@@ -132,19 +115,19 @@ describe('TodoUseCase Integration', () => {
       return;
     }
     const title = `Test Todo ${Date.now()}`;
-    const todo = await useCase.addTodo(title);
+    const todo = await TodoUseCase.addTodo(title);
 
     expect(todo.title).toBe(title);
     expect(todo.id).toBeDefined();
     expect(todo.completed).toBe(false);
 
-    const list = await useCase.listTodos();
-    const found = list.find(t => t.id === todo.id);
+    const list = await TodoUseCase.listTodos();
+    const found = list.find((t: Todo) => t.id === todo.id);
     expect(found).toBeDefined();
     expect(found?.title).toBe(title);
 
     // Cleanup
-    await useCase.deleteTodo(todo.id);
+    await TodoUseCase.deleteTodo(todo.id);
   });
 
   it('should toggle completion status', async () => {
@@ -153,15 +136,15 @@ describe('TodoUseCase Integration', () => {
       return;
     }
     const title = `Toggle Test ${Date.now()}`;
-    const todo = await useCase.addTodo(title);
+    const todo = await TodoUseCase.addTodo(title);
 
-    await useCase.toggleTodo(todo.id);
+    await TodoUseCase.toggleTodo(todo.id);
 
-    const list = await useCase.listTodos();
-    const updated = list.find(t => t.id === todo.id);
+    const list = await TodoUseCase.listTodos();
+    const updated = list.find((t: Todo) => t.id === todo.id);
     expect(updated?.completed).toBe(true);
 
     // Cleanup
-    await useCase.deleteTodo(todo.id);
+    await TodoUseCase.deleteTodo(todo.id);
   });
 });

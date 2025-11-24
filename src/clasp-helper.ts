@@ -63,15 +63,17 @@ export class ClaspHelper {
    */
   async clean(rootDir: string) {
     debugLog('clean clasp artifacts', { rootDir });
-    // Remove all clasp project artifacts
-    await fs.rm(path.join(rootDir, '.clasp.json'), {
-      force: true,
-      recursive: true,
-    });
-    await fs.rm('appsscript.json', { force: true });
-    await fs.rm('.clasp.json', { force: true });
-    await fs.rm('.clasp-dev.json', { force: true });
-    await fs.rm('.clasp-prod.json', { force: true });
+    // Remove all clasp project artifacts in parallel
+    await Promise.all([
+      fs.rm(path.join(rootDir, '.clasp.json'), {
+        force: true,
+        recursive: true,
+      }),
+      fs.rm('appsscript.json', { force: true }),
+      fs.rm('.clasp.json', { force: true }),
+      fs.rm('.clasp-dev.json', { force: true }),
+      fs.rm('.clasp-prod.json', { force: true }),
+    ]);
 
     // Make sure root dir exists
     await fs.mkdirs(rootDir);
@@ -171,9 +173,14 @@ export class ClaspHelper {
     const claspPathDist = path.join(rootDir, '.clasp.json');
     const claspPathRoot = '.clasp.json';
     const appsscriptPath = path.join(rootDir, 'appsscript.json');
-    const claspExistsDist = await fs.pathExists(claspPathDist);
-    const claspExistsRoot = await fs.pathExists(claspPathRoot);
-    const appsscriptExists = await fs.pathExists(appsscriptPath);
+
+    // Check file existence in parallel
+    const [claspExistsDist, claspExistsRoot, appsscriptExists] =
+      await Promise.all([
+        fs.pathExists(claspPathDist),
+        fs.pathExists(claspPathRoot),
+        fs.pathExists(appsscriptPath),
+      ]);
     const claspExists = claspExistsDist || claspExistsRoot;
 
     debugLog('clasp create artifacts', {
