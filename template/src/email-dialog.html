@@ -1,6 +1,9 @@
 <!doctype html>
-<html>
+<html lang="ja">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Send Todo List Email</title>
     <base target="_top" />
     <style>
       body {
@@ -27,6 +30,10 @@
         border-radius: 4px;
         box-sizing: border-box;
       }
+      input[type='email']:focus {
+        outline: 2px solid #4285f4;
+        outline-offset: 2px;
+      }
       .button-group {
         margin-top: 20px;
         text-align: right;
@@ -43,6 +50,10 @@
       button:disabled {
         opacity: 0.6;
         cursor: not-allowed;
+      }
+      button:focus {
+        outline: 2px solid #4285f4;
+        outline-offset: 2px;
       }
       .btn-primary {
         background-color: #4285f4;
@@ -100,91 +111,192 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <div id="message" class="message"></div>
+    <main class="container">
+      <div id="message" class="message" role="alert" aria-live="polite"></div>
 
-      <div class="form-group">
-        <label for="email">Email Address:</label>
-        <input
-          type="email"
-          id="email"
-          placeholder="example@example.com"
-          required
-        />
-      </div>
+      <form id="emailForm" novalidate>
+        <div class="form-group">
+          <label for="email">Email Address:</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="example@example.com"
+            required
+            aria-required="true"
+            aria-describedby="emailError"
+          />
+        </div>
 
-      <div class="button-group">
-        <button class="btn-secondary" onclick="google.script.host.close()">
-          Cancel
-        </button>
-        <button class="btn-primary" id="sendBtn" onclick="sendEmail()">
-          <span class="btn-text">Send</span>
-          <span class="spinner"></span>
-        </button>
-      </div>
-    </div>
+        <div class="button-group">
+          <button type="button" class="btn-secondary" id="cancelBtn">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" id="sendBtn">
+            <span class="btn-text">Send</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+      </form>
+    </main>
 
     <script>
-      function sendEmail() {
+      (function () {
+        'use strict';
+
+        // DOM elements
+        const emailForm = document.getElementById('emailForm');
         const emailInput = document.getElementById('email');
-        const email = emailInput.value.trim();
         const messageDiv = document.getElementById('message');
         const sendBtn = document.getElementById('sendBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const buttons = [sendBtn, cancelBtn];
 
-        // バリデーション
-        if (!email) {
-          showMessage('Please enter an email address', 'error');
-          return;
+        // Email validation regex
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        /**
+         * Shows a message to the user
+         * @param {string} text - Message text
+         * @param {'success'|'error'} type - Message type
+         */
+        function showMessage(text, type) {
+          messageDiv.textContent = text;
+          messageDiv.className = 'message ' + type;
+          messageDiv.style.display = 'block';
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-          showMessage('Please enter a valid email address', 'error');
-          return;
+        /**
+         * Hides the message
+         */
+        function hideMessage() {
+          messageDiv.style.display = 'none';
         }
 
-        // Hide previous messages
-        messageDiv.style.display = 'none';
+        /**
+         * Sets the enabled state of all buttons
+         * @param {boolean} enabled - Whether buttons should be enabled
+         */
+        function setButtonsEnabled(enabled) {
+          buttons.forEach(btn => {
+            btn.disabled = !enabled;
+          });
+        }
 
-        // ボタン無効化 + スピナー表示
-        const buttons = document.querySelectorAll('button');
-        buttons.forEach(btn => {
-          btn.disabled = true;
-        });
-        sendBtn.classList.add('loading');
-
-        // サーバー側関数を呼び出し
-        google.script.run
-          .withSuccessHandler(response => {
+        /**
+         * Sets the loading state of the send button
+         * @param {boolean} loading - Whether button is in loading state
+         */
+        function setSendButtonLoading(loading) {
+          if (loading) {
+            sendBtn.classList.add('loading');
+          } else {
             sendBtn.classList.remove('loading');
-            if (response.success) {
-              showMessage(response.message, 'success');
-              setTimeout(() => {
+          }
+        }
+
+        /**
+         * Validates the email input
+         * @returns {string|null} - Email address if valid, null otherwise
+         */
+        function validateEmail() {
+          const email = emailInput.value.trim();
+
+          if (!email) {
+            showMessage('Please enter an email address', 'error');
+            return null;
+          }
+
+          if (!EMAIL_REGEX.test(email)) {
+            showMessage('Please enter a valid email address', 'error');
+            return null;
+          }
+
+          return email;
+        }
+
+        /**
+         * Handles form submission
+         * @param {Event} event - Submit event
+         */
+        function handleSubmit(event) {
+          event.preventDefault();
+
+          const email = validateEmail();
+          if (!email) {
+            return;
+          }
+
+          hideMessage();
+          setButtonsEnabled(false);
+          setSendButtonLoading(true);
+
+          // Check if google.script is available (GAS environment)
+          if (
+            typeof google === 'undefined' ||
+            !google.script ||
+            !google.script.run
+          ) {
+            showMessage('Error: Google Apps Script API not available', 'error');
+            setButtonsEnabled(true);
+            setSendButtonLoading(false);
+            return;
+          }
+
+          // Call server-side function
+          google.script.run
+            .withSuccessHandler(handleSuccess)
+            .withFailureHandler(handleFailure)
+            .sendTodosEmail(email);
+        }
+
+        /**
+         * Handles successful email send
+         * @param {Object} response - Server response
+         */
+        function handleSuccess(response) {
+          setSendButtonLoading(false);
+
+          if (response.success) {
+            showMessage(response.message, 'success');
+            setTimeout(() => {
+              if (google.script && google.script.host) {
                 google.script.host.close();
-              }, 1500);
-            } else {
-              showMessage(response.error, 'error');
-              buttons.forEach(btn => {
-                btn.disabled = false;
-              });
-            }
-          })
-          .withFailureHandler(error => {
-            sendBtn.classList.remove('loading');
-            showMessage('Error: ' + error.message, 'error');
-            buttons.forEach(btn => {
-              btn.disabled = false;
-            });
-          })
-          .sendTodosEmail(email);
-      }
+              }
+            }, 1500);
+          } else {
+            showMessage(response.error, 'error');
+            setButtonsEnabled(true);
+          }
+        }
 
-      function showMessage(text, type) {
-        const messageDiv = document.getElementById('message');
-        messageDiv.textContent = text;
-        messageDiv.className = 'message ' + type;
-        messageDiv.style.display = 'block';
-      }
+        /**
+         * Handles email send failure
+         * @param {Error} error - Error object
+         */
+        function handleFailure(error) {
+          setSendButtonLoading(false);
+          showMessage('Error: ' + error.message, 'error');
+          setButtonsEnabled(true);
+        }
+
+        /**
+         * Handles cancel button click
+         */
+        function handleCancel() {
+          if (
+            typeof google !== 'undefined' &&
+            google.script &&
+            google.script.host
+          ) {
+            google.script.host.close();
+          }
+        }
+
+        // Event listeners
+        emailForm.addEventListener('submit', handleSubmit);
+        cancelBtn.addEventListener('click', handleCancel);
+      })();
     </script>
   </body>
 </html>

@@ -1,6 +1,9 @@
 <!doctype html>
-<html>
+<html lang="ja">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wyside Todo</title>
     <base target="_top" />
     <style>
       body {
@@ -35,6 +38,13 @@
         font-size: 1.1em;
         padding: 0 4px;
       }
+      button.delete-btn:hover {
+        background-color: #fee;
+      }
+      button.delete-btn:focus {
+        outline: 2px solid #ea4335;
+        outline-offset: 2px;
+      }
       #add-form {
         display: flex;
         gap: 8px;
@@ -46,6 +56,15 @@
         border: 1px solid #dadce0;
         border-radius: 4px;
       }
+      input[type='text']:focus {
+        outline: 2px solid #1a73e8;
+        outline-offset: 2px;
+        border-color: #1a73e8;
+      }
+      input[type='checkbox']:focus {
+        outline: 2px solid #1a73e8;
+        outline-offset: 2px;
+      }
       button[type='submit'] {
         background: #1a73e8;
         color: white;
@@ -54,173 +73,266 @@
         padding: 6px 12px;
         cursor: pointer;
       }
-      button[type='submit']:hover {
+      button[type='submit']:hover:not(:disabled) {
         background: #1765cc;
+      }
+      button[type='submit']:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      button[type='submit']:focus {
+        outline: 2px solid #1a73e8;
+        outline-offset: 2px;
       }
       /* Add loading state */
       .loading {
         opacity: 0.5;
         pointer-events: none;
       }
+      /* Empty state */
+      .empty-state {
+        color: #888;
+        font-style: italic;
+        padding: 16px 0;
+        text-align: center;
+      }
     </style>
   </head>
   <body>
-    <h3>Wyside Todo</h3>
-    <form id="add-form">
-      <input type="text" id="new-todo" placeholder="New task..." required />
-      <button type="submit" id="add-btn">Add</button>
-    </form>
-    <div id="todo-list">Loading...</div>
+    <main>
+      <h3>Wyside Todo</h3>
+      <form id="add-form">
+        <label for="new-todo" class="sr-only">New task</label>
+        <input
+          type="text"
+          id="new-todo"
+          name="new-todo"
+          placeholder="New task..."
+          required
+          aria-required="true"
+        />
+        <button type="submit" id="add-btn" aria-label="Add new task">
+          Add
+        </button>
+      </form>
+      <div
+        id="todo-list"
+        role="list"
+        aria-live="polite"
+        aria-label="Todo list"
+      >
+        Loading...
+      </div>
+    </main>
 
     <script>
-      // Cache DOM references
-      const todoListEl = document.getElementById('todo-list');
-      const addForm = document.getElementById('add-form');
-      const newTodoInput = document.getElementById('new-todo');
-      const addBtn = document.getElementById('add-btn');
+      (function () {
+        'use strict';
 
-      function render(todos) {
-        // Use DocumentFragment for batch DOM updates
-        const fragment = document.createDocumentFragment();
-
-        if (todos.length === 0) {
-          const emptyDiv = document.createElement('div');
-          emptyDiv.style.cssText = 'color: #888; font-style: italic;';
-          emptyDiv.textContent = 'No tasks yet.';
-          fragment.appendChild(emptyDiv);
-        } else {
-          todos.forEach(todo => {
-            const div = document.createElement('div');
-            div.className = 'todo-item ' + (todo.completed ? 'completed' : '');
-            div.dataset.id = todo.id;
-
-            // Use DOM API instead of innerHTML for security and speed
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = todo.completed;
-            // Let browser handle checkbox state, then sync UI with that state
-            checkbox.onchange = () => {
-              const newCheckedState = checkbox.checked;
-              // Update UI to match checkbox state
-              if (newCheckedState) {
-                div.classList.add('completed');
-              } else {
-                div.classList.remove('completed');
-              }
-              // Send to server
-              toggle(todo.id, newCheckedState);
-            };
-
-            const span = document.createElement('span');
-            span.className = 'todo-text';
-            span.textContent = todo.title; // XSS protection
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = '×';
-            deleteBtn.title = 'Delete';
-            deleteBtn.onclick = () => remove(todo.id);
-
-            div.appendChild(checkbox);
-            div.appendChild(span);
-            div.appendChild(deleteBtn);
-            fragment.appendChild(div);
-          });
+        // Check if Google Apps Script API is available
+        if (typeof google === 'undefined' || !google.script || !google.script.run) {
+          console.warn('Google Apps Script API not available');
+          return;
         }
 
-        // Single DOM update
-        todoListEl.innerHTML = '';
-        todoListEl.appendChild(fragment);
-      }
+        // Cache DOM references
+        const todoListEl = document.getElementById('todo-list');
+        const addForm = document.getElementById('add-form');
+        const newTodoInput = document.getElementById('new-todo');
+        const addBtn = document.getElementById('add-btn');
 
-      function load() {
-        todoListEl.classList.add('loading');
-        google.script.run
-          .withSuccessHandler(todos => {
-            render(todos);
-            todoListEl.classList.remove('loading');
-          })
-          .withFailureHandler(handleError)
-          .apiListTodos();
-      }
+        /**
+         * Renders the todo list
+         * @param {Array<{id: string, title: string, completed: boolean}>} todos - Array of todo items
+         */
+        function render(todos) {
+          // Use DocumentFragment for batch DOM updates
+          const fragment = document.createDocumentFragment();
 
-      // Reusable error handler
-      function handleError(err) {
-        alert('Error: ' + err);
-        todoListEl.classList.remove('loading');
-      }
+          if (todos.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-state';
+            emptyDiv.textContent = 'No tasks yet.';
+            fragment.appendChild(emptyDiv);
+          } else {
+            todos.forEach(todo => {
+              const div = document.createElement('div');
+              div.className = 'todo-item ' + (todo.completed ? 'completed' : '');
+              div.setAttribute('role', 'listitem');
+              div.dataset.id = todo.id;
 
-      addForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const title = newTodoInput.value.trim();
-        if (!title) return;
+              // Create checkbox
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.checked = todo.completed;
+              checkbox.setAttribute('aria-label', 'Mark as ' + (todo.completed ? 'incomplete' : 'complete'));
+              checkbox.addEventListener('change', () => handleToggle(todo.id, checkbox, div));
 
-        const originalText = addBtn.textContent;
-        addBtn.disabled = true;
-        addBtn.textContent = '...';
+              // Create text span
+              const span = document.createElement('span');
+              span.className = 'todo-text';
+              span.textContent = todo.title; // XSS protection
 
-        google.script.run
-          .withSuccessHandler(() => {
-            newTodoInput.value = '';
-            addBtn.disabled = false;
-            addBtn.textContent = originalText;
-            load();
-          })
-          .withFailureHandler(err => {
-            handleError(err);
-            addBtn.disabled = false;
-            addBtn.textContent = originalText;
-          })
-          .apiAddTodo(title);
-      });
+              // Create delete button
+              const deleteBtn = document.createElement('button');
+              deleteBtn.className = 'delete-btn';
+              deleteBtn.type = 'button';
+              deleteBtn.textContent = '×';
+              deleteBtn.setAttribute('aria-label', 'Delete task: ' + todo.title);
+              deleteBtn.addEventListener('click', () => handleRemove(todo.id));
 
-      function toggle(id, newCheckedState) {
-        // UI already updated by onchange handler
-        // Just send to server and handle errors
-        const item = todoListEl.querySelector(`[data-id="${id}"]`);
+              div.appendChild(checkbox);
+              div.appendChild(span);
+              div.appendChild(deleteBtn);
+              fragment.appendChild(div);
+            });
+          }
 
-        google.script.run
-          .withFailureHandler(err => {
-            // Rollback on error: revert checkbox and class
-            if (item) {
-              const checkbox = item.querySelector('input[type="checkbox"]');
-              if (checkbox) checkbox.checked = !newCheckedState;
+          // Single DOM update
+          todoListEl.innerHTML = '';
+          todoListEl.appendChild(fragment);
+        }
+
+        /**
+         * Loads todos from server
+         */
+        function load() {
+          todoListEl.classList.add('loading');
+          google.script.run
+            .withSuccessHandler(todos => {
+              render(todos);
+              todoListEl.classList.remove('loading');
+            })
+            .withFailureHandler(err => {
+              handleError(err);
+              todoListEl.classList.remove('loading');
+            })
+            .apiListTodos();
+        }
+
+        /**
+         * Handles errors
+         * @param {Error|string} err - Error object or message
+         */
+        function handleError(err) {
+          const message = err.message || err.toString();
+          alert('Error: ' + message);
+        }
+
+        /**
+         * Handles form submission to add a new todo
+         * @param {Event} event - Submit event
+         */
+        function handleAddSubmit(event) {
+          event.preventDefault();
+          const title = newTodoInput.value.trim();
+          if (!title) return;
+
+          const originalText = addBtn.textContent;
+          addBtn.disabled = true;
+          addBtn.textContent = '...';
+
+          google.script.run
+            .withSuccessHandler(() => {
+              newTodoInput.value = '';
+              addBtn.disabled = false;
+              addBtn.textContent = originalText;
+              load();
+            })
+            .withFailureHandler(err => {
+              handleError(err);
+              addBtn.disabled = false;
+              addBtn.textContent = originalText;
+            })
+            .apiAddTodo(title);
+        }
+
+        /**
+         * Handles toggling a todo's completion status
+         * @param {string} id - Todo ID
+         * @param {HTMLInputElement} checkbox - Checkbox element
+         * @param {HTMLElement} div - Todo item container
+         */
+        function handleToggle(id, checkbox, div) {
+          const newCheckedState = checkbox.checked;
+
+          // Update UI optimistically
+          if (newCheckedState) {
+            div.classList.add('completed');
+          } else {
+            div.classList.remove('completed');
+          }
+
+          // Update aria-label
+          checkbox.setAttribute(
+            'aria-label',
+            'Mark as ' + (newCheckedState ? 'incomplete' : 'complete')
+          );
+
+          // Send to server
+          google.script.run
+            .withFailureHandler(err => {
+              // Rollback on error: revert checkbox and class
+              checkbox.checked = !newCheckedState;
               if (newCheckedState) {
-                item.classList.remove('completed');
+                div.classList.remove('completed');
               } else {
-                item.classList.add('completed');
+                div.classList.add('completed');
               }
-            }
-            handleError(err);
-            load(); // Sync with server
-          })
-          .apiToggleTodo(id);
-      }
+              checkbox.setAttribute(
+                'aria-label',
+                'Mark as ' + (!newCheckedState ? 'incomplete' : 'complete')
+              );
+              handleError(err);
+              load(); // Sync with server
+            })
+            .apiToggleTodo(id);
+        }
 
-      function remove(id) {
-        if (!confirm('Delete this task?')) return;
+        /**
+         * Handles removing a todo
+         * @param {string} id - Todo ID
+         */
+        function handleRemove(id) {
+          if (!confirm('Delete this task?')) return;
 
-        // Optimistic removal
-        const item = todoListEl.querySelector(`[data-id="${id}"]`);
-        const removedItem = item ? item.cloneNode(true) : null;
-        if (item) item.remove();
+          // Optimistic removal
+          const item = todoListEl.querySelector(`[data-id="${id}"]`);
+          const removedItem = item ? item.cloneNode(true) : null;
+          const nextSibling = item ? item.nextSibling : null;
+          const parent = item ? item.parentNode : null;
 
-        google.script.run
-          .withFailureHandler(err => {
-            // Rollback on error
-            if (removedItem && item && item.parentNode) {
-              item.parentNode.insertBefore(removedItem, item.nextSibling);
-            }
-            handleError(err);
-            load(); // Sync with server
-          })
-          .apiDeleteTodo(id);
-      }
+          if (item) item.remove();
 
-      // Initial load
-      if (typeof google !== 'undefined') {
+          google.script.run
+            .withFailureHandler(err => {
+              // Rollback on error
+              if (removedItem && parent) {
+                parent.insertBefore(removedItem, nextSibling);
+                // Re-attach event listeners
+                const checkbox = removedItem.querySelector('input[type="checkbox"]');
+                const deleteBtn = removedItem.querySelector('.delete-btn');
+                if (checkbox) {
+                  checkbox.addEventListener('change', () =>
+                    handleToggle(id, checkbox, removedItem)
+                  );
+                }
+                if (deleteBtn) {
+                  deleteBtn.addEventListener('click', () => handleRemove(id));
+                }
+              }
+              handleError(err);
+              load(); // Sync with server
+            })
+            .apiDeleteTodo(id);
+        }
+
+        // Event listeners
+        addForm.addEventListener('submit', handleAddSubmit);
+
+        // Initial load
         load();
-      }
+      })();
     </script>
   </body>
 </html>
