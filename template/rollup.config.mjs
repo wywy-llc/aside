@@ -1,13 +1,13 @@
+import { babel } from '@rollup/plugin-babel';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import dotenv from 'dotenv';
-import { babel } from '@rollup/plugin-babel';
+import fs from 'fs';
+import path from 'path';
 import cleanup from 'rollup-plugin-cleanup';
 import prettier from 'rollup-plugin-prettier';
 import typescript from 'rollup-plugin-typescript2';
-import fs from 'fs';
-import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Get __dirname in ESM
@@ -89,7 +89,9 @@ function copyHtmlFiles() {
             source: htmlContent,
           });
 
-          console.log(`  ✅ Queued ${name} for output (${htmlContent.length} bytes)`);
+          console.log(
+            `  ✅ Queued ${name} for output (${htmlContent.length} bytes)`
+          );
         } catch (error) {
           console.error(`  ❌ Failed to process ${name}:`, error.message);
         }
@@ -98,14 +100,16 @@ function copyHtmlFiles() {
 
     // generateBundle: Called after all files are generated
     generateBundle(_options, bundle) {
-      const htmlCount = Object.keys(bundle).filter(
-        fileName => fileName.endsWith('.html')
+      const htmlCount = Object.keys(bundle).filter(fileName =>
+        fileName.endsWith('.html')
       ).length;
 
       if (htmlCount > 0) {
         console.log(`\n📄 ${htmlCount} HTML file(s) will be written to dist/`);
       } else {
-        console.warn('\n⚠️  No HTML files found in bundle! GAS UI may not work.');
+        console.warn(
+          '\n⚠️  No HTML files found in bundle! GAS UI may not work.'
+        );
       }
     },
   };
@@ -150,11 +154,16 @@ function exposeGasFunctions() {
       const functions = Array.from(exportedFunctions).sort();
 
       if (functions.length === 0) {
-        console.warn('⚠️  No exported functions detected. GAS triggers may not work.');
+        console.warn(
+          '⚠️  No exported functions detected. GAS triggers may not work.'
+        );
         return null;
       }
 
-      console.log(`✅ Auto-detected ${functions.length} exported functions:`, functions.join(', '));
+      console.log(
+        `✅ Auto-detected ${functions.length} exported functions:`,
+        functions.join(', ')
+      );
 
       // Step 2a: Wrap IIFE with variable assignment
       let wrappedCode = code.replace(
@@ -163,7 +172,9 @@ function exposeGasFunctions() {
       );
 
       // Step 2b: Generate return object dynamically based on detected exports
-      const returnObject = functions.map(name => `    ${name}: ${name},`).join('\n');
+      const returnObject = functions
+        .map(name => `    ${name}: ${name},`)
+        .join('\n');
       const returnStatement = `
   // Auto-generated API object from exported functions
   return {
@@ -172,8 +183,9 @@ ${returnObject}
 })();`;
 
       // Step 2c: Generate global function declarations
-      const globalFunctions = functions.map(name => {
-        return `
+      const globalFunctions = functions
+        .map(name => {
+          return `
 /**
  * Auto-generated GAS global wrapper for ${name}
  * Delegates to WysideApp.${name}
@@ -181,7 +193,8 @@ ${returnObject}
 function ${name}() {
   return WysideApp.${name}.apply(this, arguments);
 }`;
-      }).join('\n');
+        })
+        .join('\n');
 
       // Step 2d: Remove CommonJS exports (if any)
       wrappedCode = wrappedCode.replace(/\s+exports\.\w+\s*=\s*\w+;/g, '');
