@@ -88,6 +88,40 @@ if (!globalScope.Request) {
   globalScope.Request = RequestPolyfill;
 }
 
+if (!globalScope.Response) {
+  class ResponsePolyfill {
+    body: string;
+    status: number;
+    headers: InstanceType<typeof globalScope.Headers>;
+
+    constructor(body?: unknown, init: any = {}) {
+      if (body === undefined || body === null) {
+        this.body = '';
+      } else if (typeof body === 'string') {
+        this.body = body;
+      } else {
+        this.body = JSON.stringify(body);
+      }
+      this.status = typeof init.status === 'number' ? init.status : 200;
+      this.headers = new globalScope.Headers(init.headers || {});
+    }
+
+    get ok() {
+      return this.status >= 200 && this.status < 300;
+    }
+
+    async json() {
+      return JSON.parse(this.body || '{}');
+    }
+
+    async text() {
+      return this.body;
+    }
+  }
+
+  globalScope.Response = ResponsePolyfill;
+}
+
 // Use MAIN spreadsheet for this Todo app
 const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
 
