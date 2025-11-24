@@ -4,6 +4,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { config } from 'dotenv';
 
 import {
   driveCreateFolder,
@@ -28,6 +29,9 @@ import {
   syncLocalSecrets,
   type SyncLocalSecretsArgs,
 } from './tools/sync-local-secrets.js';
+
+// Load environment variables from .env
+config();
 
 const server = new Server(
   { name: 'wyside-mcp', version: '1.0.0' },
@@ -195,6 +199,47 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
 });
 
 async function main() {
+  // Test mode: Run tool tests if TEST_MODE=true in .env
+  if (process.env.TEST_MODE === 'true') {
+    console.error('🧪 Running in TEST MODE');
+
+    // Test sync_local_secrets if TEST_PROJECT_ID is set
+    if (process.env.TEST_PROJECT_ID) {
+      console.error('\n📋 Testing sync_local_secrets...');
+      try {
+        const result = await syncLocalSecrets({
+          projectId: process.env.TEST_PROJECT_ID,
+          spreadsheetId: process.env.TEST_SPREADSHEET_ID,
+        });
+        console.error('✅ Test result:', JSON.stringify(result, null, 2));
+      } catch (error) {
+        console.error('❌ Test failed:', error);
+      }
+    }
+
+    // Test scaffold_feature if TEST_FEATURE_NAME is set
+    if (process.env.TEST_FEATURE_NAME) {
+      console.error('\n📋 Testing scaffold_feature...');
+      try {
+        const operations = process.env.TEST_FEATURE_OPERATIONS?.split(',') || [
+          'create',
+          'read',
+        ];
+        const result = await scaffoldFeature({
+          featureName: process.env.TEST_FEATURE_NAME,
+          operations,
+        });
+        console.error('✅ Test result:', JSON.stringify(result, null, 2));
+      } catch (error) {
+        console.error('❌ Test failed:', error);
+      }
+    }
+
+    console.error('\n✨ Test mode completed. Exiting...');
+    process.exit(0);
+  }
+
+  // Normal mode: Start MCP server
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('wyside MCP server running on stdio');
