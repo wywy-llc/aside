@@ -49,7 +49,7 @@ you need to complete the following prerequisites (including creating a Service A
 2. Selecting/Creating a Google Cloud Project.
 3. Enabling necessary APIs (Sheets, Drive, Gmail).
 4. Creating a Service Account & downloading keys (`secrets/service-account.json`).
-5. Configuring environment variables: Create a `template/.env` file based on `template/.env.example` and configure the necessary environment variables, especially `GOOGLE_APPLICATION_CREDENTIALS` to point to the downloaded service account key, and also Spreadsheet IDs and GCP project ID.
+5. Configuring environment variables: Create a `.env` file based on `.env.example` and configure the necessary environment variables, especially `GOOGLE_APPLICATION_CREDENTIALS` to point to the downloaded service account key, and also Spreadsheet IDs and GCP project ID.
 
 Once these prerequisites are completed, execute the following command:
 
