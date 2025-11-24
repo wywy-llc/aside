@@ -1,10 +1,7 @@
 import { Hono } from 'hono';
 import { SpreadsheetType, getSpreadsheetId } from './config.js';
-import { UniversalSheetsClient } from './core/client.js';
-import { UniversalGmailClient } from './core/gmail-client.js';
 import { EmailUseCase } from './features/email/EmailUseCase.js';
 import { TodoUseCase } from './features/todo/TodoUseCase.js';
-import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
 
 /**
  * Hono APIサーバー - GAS/Node.js両対応
@@ -15,19 +12,6 @@ import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
  */
 
 const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
-
-function getTodoUseCase() {
-  const client = new UniversalSheetsClient();
-  const repo = new UniversalTodoRepo(client, SPREADSHEET_ID);
-  return new TodoUseCase(repo);
-}
-
-function getEmailUseCase() {
-  const sheetsClient = new UniversalSheetsClient();
-  const gmailClient = new UniversalGmailClient();
-  const todoRepo = new UniversalTodoRepo(sheetsClient, SPREADSHEET_ID);
-  return new EmailUseCase(gmailClient, todoRepo);
-}
 
 const app = new Hono();
 
@@ -46,7 +30,7 @@ app.use('*', async (c, next) => {
  */
 app.get('/api/todos', async c => {
   try {
-    const todos = await getTodoUseCase().listTodos();
+    const todos = await TodoUseCase.listTodos(SPREADSHEET_ID);
     return c.json({ success: true, data: todos });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -67,7 +51,7 @@ app.post('/api/todos', async c => {
       return c.json({ success: false, error: 'Title is required' }, 400);
     }
 
-    const todo = await getTodoUseCase().addTodo(title);
+    const todo = await TodoUseCase.addTodo(SPREADSHEET_ID, title);
     return c.json({ success: true, data: todo }, 201);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -81,7 +65,7 @@ app.post('/api/todos', async c => {
 app.put('/api/todos/:id', async c => {
   try {
     const id = c.req.param('id');
-    await getTodoUseCase().toggleTodo(id);
+    await TodoUseCase.toggleTodo(SPREADSHEET_ID, id);
     return c.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -95,7 +79,7 @@ app.put('/api/todos/:id', async c => {
 app.delete('/api/todos/:id', async c => {
   try {
     const id = c.req.param('id');
-    await getTodoUseCase().deleteTodo(id);
+    await TodoUseCase.deleteTodo(SPREADSHEET_ID, id);
     return c.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -127,7 +111,7 @@ app.post('/api/todos/email', async c => {
       return c.json({ success: false, error: 'Invalid email address' }, 400);
     }
 
-    await getEmailUseCase().sendTodosEmail(to);
+    await EmailUseCase.sendTodosEmail(to, SPREADSHEET_ID);
     return c.json({ success: true, message: 'Email sent successfully' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
