@@ -6,6 +6,13 @@ import { babel } from '@rollup/plugin-babel';
 import cleanup from 'rollup-plugin-cleanup';
 import prettier from 'rollup-plugin-prettier';
 import typescript from 'rollup-plugin-typescript2';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables from .env
 dotenv.config();
@@ -46,6 +53,60 @@ function removeNodeCode() {
       );
 
       return { code: transformed, map: null };
+    },
+  };
+}
+
+// Plugin to copy HTML files to dist directory
+function copyHtmlFiles() {
+  return {
+    name: 'copy-html-files',
+
+    // buildEnd: Called when bundle generation is complete, before files are written
+    buildEnd() {
+      const htmlFiles = [
+        { src: 'src/index.html', name: 'index.html' },
+        { src: 'src/email-dialog.html', name: 'email-dialog.html' },
+      ];
+
+      console.log('\n🌐 Processing HTML files for GAS deployment...');
+
+      htmlFiles.forEach(({ src, name }) => {
+        const srcPath = path.join(__dirname, src);
+
+        if (!fs.existsSync(srcPath)) {
+          console.warn(`  ⚠️  Warning: ${name} not found at ${srcPath}`);
+          return;
+        }
+
+        try {
+          const htmlContent = fs.readFileSync(srcPath, 'utf-8');
+
+          // Emit as asset - Rollup will write it to output directory
+          this.emitFile({
+            type: 'asset',
+            fileName: name,
+            source: htmlContent,
+          });
+
+          console.log(`  ✅ Queued ${name} for output (${htmlContent.length} bytes)`);
+        } catch (error) {
+          console.error(`  ❌ Failed to process ${name}:`, error.message);
+        }
+      });
+    },
+
+    // generateBundle: Called after all files are generated
+    generateBundle(_options, bundle) {
+      const htmlCount = Object.keys(bundle).filter(
+        fileName => fileName.endsWith('.html')
+      ).length;
+
+      if (htmlCount > 0) {
+        console.log(`\n📄 ${htmlCount} HTML file(s) will be written to dist/`);
+      } else {
+        console.warn('\n⚠️  No HTML files found in bundle! GAS UI may not work.');
+      }
     },
   };
 }
@@ -199,6 +260,8 @@ export default {
     // Expose GAS functions to global scope (must be before prettier)
     exposeGasFunctions(),
     prettier({ parser: 'typescript' }),
+    // Copy HTML files to dist (must be last to ensure all files are processed)
+    copyHtmlFiles(),
   ],
   context: 'this',
 };

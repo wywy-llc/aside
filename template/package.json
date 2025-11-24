@@ -8,7 +8,7 @@
     "lint": "eslint --fix --no-error-on-unmatched-pattern src/ test/",
     "format": "prettier --write --log-level silent .",
     "bundle": "rollup --no-treeshake -c rollup.config.mjs",
-    "build": "npm run clean && npm run bundle && ncp appsscript.json dist/appsscript.json && ncp src/index.html dist/index.html && ncp src/email-dialog.html dist/email-dialog.html",
+    "build": "npm run clean && npm run bundle && ncp appsscript.json dist/appsscript.json",
     "dev": "tsx src/server.ts",
     "test": "npm run lint && npx tsc --noEmit && vitest run",
     "test:watch": "vitest",
