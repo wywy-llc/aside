@@ -42,11 +42,11 @@ export async function runMcpSetup(_options: { title: string }) {
   try {
     await client.connect(transport);
 
-    console.log(chalk.blue('[MCP] invoking sync_local_secrets...'));
+    console.log(chalk.blue('[MCP] invoking sync_secrets_from_gcp_to_local...'));
 
     // Call the tool
     const result = await client.callTool({
-      name: 'sync_local_secrets',
+      name: 'sync_secrets_from_gcp_to_local',
       arguments: {
         projectId: undefined, // Let it be interactive or detect from gcloud
         spreadsheetId: undefined, // Let it create new or use existing logic

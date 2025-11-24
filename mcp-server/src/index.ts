@@ -41,7 +41,7 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
-      name: 'sync_local_secrets',
+      name: 'sync_secrets_from_gcp_to_local',
       description:
         'Auto-configure GCP project, enable APIs, create Service Account, prepare local Sheets API access',
       inputSchema: {
@@ -158,7 +158,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
 
   try {
     switch (name) {
-      case 'sync_local_secrets':
+      case 'sync_secrets_from_gcp_to_local':
         return await syncSecretsFromGcpToLocal(
           (args || {}) as unknown as SyncSecretsFromGcpToLocalArgs
         );
@@ -203,9 +203,9 @@ async function main() {
   if (process.env.TEST_MODE === 'true') {
     console.error('🧪 Running in TEST MODE');
 
-    // Test sync_local_secrets if TEST_PROJECT_ID is set
+    // Test sync_secrets_from_gcp_to_local if TEST_PROJECT_ID is set
     if (process.env.TEST_PROJECT_ID) {
-      console.error('\n📋 Testing sync_local_secrets...');
+      console.error('\n📋 Testing sync_secrets_from_gcp_to_local...');
       try {
         const result = await syncSecretsFromGcpToLocal({
           projectId: process.env.TEST_PROJECT_ID,
