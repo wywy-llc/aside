@@ -11,6 +11,7 @@ export const config: {
   dependencies: [
     '@babel/core',
     '@babel/preset-env',
+    '@eslint/js',
     '@hono/node-server',
     '@google/clasp',
     '@rollup/plugin-babel',
@@ -40,6 +41,7 @@ export const config: {
     'rollup-plugin-typescript2',
     'ts-node',
     'typescript',
+    'typescript-eslint',
     'vite',
     'vitest',
   ],
