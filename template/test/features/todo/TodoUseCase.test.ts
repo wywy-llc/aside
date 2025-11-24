@@ -1,5 +1,8 @@
-import { UniversalSheetsClient } from '@/core/client';
-import { TodoUseCase } from '@/features/todo/TodoUseCase';
+import { SheetsClient, type SheetsClientInstance } from '@/core/client';
+import {
+  createTodoUseCase,
+  type TodoUseCase,
+} from '@/features/todo/TodoUseCase';
 import { UniversalTodoRepo } from '@/features/todo/UniversalTodoRepo';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs';
@@ -33,7 +36,7 @@ const SHOULD_RUN_TESTS =
 
 // Helper to check if a sheet exists
 async function sheetExists(
-  client: UniversalSheetsClient,
+  client: SheetsClientInstance,
   spreadsheetId: string,
   sheetName: string
 ): Promise<boolean> {
@@ -50,7 +53,7 @@ async function sheetExists(
 
 // Helper to rename the first sheet to 'Todos' and add headers
 async function createSheet(
-  client: UniversalSheetsClient,
+  client: SheetsClientInstance,
   spreadsheetId: string,
   sheetName: string
 ): Promise<void> {
@@ -96,7 +99,7 @@ async function createSheet(
 }
 
 describe('TodoUseCase Integration', () => {
-  let client: UniversalSheetsClient;
+  let client: SheetsClientInstance;
   let repo: UniversalTodoRepo;
   let useCase: TodoUseCase;
 
@@ -106,7 +109,7 @@ describe('TodoUseCase Integration', () => {
     }
 
     // Ensure Todos sheet exists
-    client = new UniversalSheetsClient();
+    client = SheetsClient.create();
     const exists = await sheetExists(client, SPREADSHEET_ID, 'Todos');
     if (!exists) {
       console.log('Creating Todos sheet...');
@@ -118,9 +121,9 @@ describe('TodoUseCase Integration', () => {
     if (!SHOULD_RUN_TESTS) {
       return;
     }
-    client = new UniversalSheetsClient();
+    client = SheetsClient.create();
     repo = new UniversalTodoRepo(client, SPREADSHEET_ID);
-    useCase = new TodoUseCase(repo);
+    useCase = createTodoUseCase(repo);
   });
 
   it('should add and retrieve a todo', async () => {

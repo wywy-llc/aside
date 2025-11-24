@@ -1,3 +1,4 @@
+import { getSpreadsheetId, SpreadsheetType } from '@/config';
 import { GmailClient } from '@/core/gmail-client';
 import { UniversalTodoRepo } from '../todo/UniversalTodoRepo';
 
@@ -66,11 +67,9 @@ export const EmailUseCase = (() => {
    * @param to 宛先メールアドレス
    * @param spreadsheetId スプレッドシートID
    */
-  const sendTodosEmail = async (
-    to: string,
-    spreadsheetId: string
-  ): Promise<void> => {
+  const sendTodosEmail = async (to: string): Promise<void> => {
     // TODOリスト取得
+    const spreadsheetId = getSpreadsheetId(SpreadsheetType.TODOS);
     const todoRepo = UniversalTodoRepo.create(spreadsheetId);
     const todos = await todoRepo.getTodos();
 

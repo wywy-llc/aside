@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { SpreadsheetType, getSpreadsheetId } from './config.js';
 import { EmailUseCase } from './features/email/EmailUseCase.js';
 import { TodoUseCase } from './features/todo/TodoUseCase.js';
 
@@ -11,8 +10,6 @@ import { TodoUseCase } from './features/todo/TodoUseCase.js';
  * - Node.js: @hono/node-serverでホスティング
  */
 
-const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
-
 const app = new Hono();
 
 // CORS設定（Node.js開発環境用）
@@ -23,18 +20,18 @@ app.use('*', async (c, next) => {
   c.res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
 });
 
-// ===== TODO API Routes =====
+// ===== TODOs API Routes =====
 
 /**
  * GET /api/todos - TODOリスト取得
  */
-app.get('/api/todos', async c => {
+app.get('/api/todos', async context => {
   try {
-    const todos = await TodoUseCase.listTodos(SPREADSHEET_ID);
-    return c.json({ success: true, data: todos });
+    const todos = await TodoUseCase.listTodos();
+    return context.json({ success: true, data: todos });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ success: false, error: message }, 500);
+    return context.json({ success: false, error: message }, 500);
   }
 });
 
@@ -42,48 +39,48 @@ app.get('/api/todos', async c => {
  * POST /api/todos - TODO追加
  * Body: { title: string }
  */
-app.post('/api/todos', async c => {
+app.post('/api/todos', async context => {
   try {
-    const body = await c.req.json();
+    const body = await context.req.json();
     const { title } = body;
 
     if (!title) {
-      return c.json({ success: false, error: 'Title is required' }, 400);
+      return context.json({ success: false, error: 'Title is required' }, 400);
     }
 
-    const todo = await TodoUseCase.addTodo(SPREADSHEET_ID, title);
-    return c.json({ success: true, data: todo }, 201);
+    const todo = await TodoUseCase.addTodo(title);
+    return context.json({ success: true, data: todo }, 201);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ success: false, error: message }, 500);
+    return context.json({ success: false, error: message }, 500);
   }
 });
 
 /**
  * PUT /api/todos/:id - TODO更新（toggle）
  */
-app.put('/api/todos/:id', async c => {
+app.put('/api/todos/:id', async context => {
   try {
-    const id = c.req.param('id');
-    await TodoUseCase.toggleTodo(SPREADSHEET_ID, id);
-    return c.json({ success: true });
+    const id = context.req.param('id');
+    await TodoUseCase.toggleTodo(id);
+    return context.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ success: false, error: message }, 500);
+    return context.json({ success: false, error: message }, 500);
   }
 });
 
 /**
  * DELETE /api/todos/:id - TODO削除
  */
-app.delete('/api/todos/:id', async c => {
+app.delete('/api/todos/:id', async context => {
   try {
-    const id = c.req.param('id');
-    await TodoUseCase.deleteTodo(SPREADSHEET_ID, id);
-    return c.json({ success: true });
+    const id = context.req.param('id');
+    await TodoUseCase.deleteTodo(id);
+    return context.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ success: false, error: message }, 500);
+    return context.json({ success: false, error: message }, 500);
   }
 });
 
@@ -93,13 +90,13 @@ app.delete('/api/todos/:id', async c => {
  * POST /api/todos/email - TODOリストをメール送信
  * Body: { to: string }
  */
-app.post('/api/todos/email', async c => {
+app.post('/api/todos/email', async context => {
   try {
-    const body = await c.req.json();
+    const body = await context.req.json();
     const { to } = body;
 
     if (!to) {
-      return c.json(
+      return context.json(
         { success: false, error: 'Email address is required' },
         400
       );
@@ -108,14 +105,17 @@ app.post('/api/todos/email', async c => {
     // 簡易的なメールアドレス検証
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(to)) {
-      return c.json({ success: false, error: 'Invalid email address' }, 400);
+      return context.json(
+        { success: false, error: 'Invalid email address' },
+        400
+      );
     }
 
-    await EmailUseCase.sendTodosEmail(to, SPREADSHEET_ID);
-    return c.json({ success: true, message: 'Email sent successfully' });
+    await EmailUseCase.sendTodosEmail(to);
+    return context.json({ success: true, message: 'Email sent successfully' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ success: false, error: message }, 500);
+    return context.json({ success: false, error: message }, 500);
   }
 });
 

@@ -1,10 +1,6 @@
 import app from './api.js';
-import { SpreadsheetType, getSpreadsheetId } from './config.js';
-import { UniversalSheetsClient } from './core/client.js';
-import { UniversalGmailClient } from './core/gmail-client.js';
 import { EmailUseCase } from './features/email/EmailUseCase.js';
 import { TodoUseCase } from './features/todo/TodoUseCase.js';
-import { UniversalTodoRepo } from './features/todo/UniversalTodoRepo.js';
 
 // GAS/Nodeどちらでも動くグローバル参照
 // eslint-disable-next-line @typescript-eslint/no-implied-eval
@@ -125,22 +121,6 @@ if (!globalScope.Response) {
   globalScope.Response = ResponsePolyfill;
 }
 
-// Use MAIN spreadsheet for this Todo app
-const SPREADSHEET_ID = getSpreadsheetId(SpreadsheetType.MAIN);
-
-function getTodoUseCase() {
-  const client = new UniversalSheetsClient();
-  const repo = new UniversalTodoRepo(client, SPREADSHEET_ID);
-  return new TodoUseCase(repo);
-}
-
-function getEmailUseCase() {
-  const sheetsClient = new UniversalSheetsClient();
-  const gmailClient = new UniversalGmailClient();
-  const todoRepo = new UniversalTodoRepo(sheetsClient, SPREADSHEET_ID);
-  return new EmailUseCase(gmailClient, todoRepo);
-}
-
 /**
  * GAS用のWeb Appエントリーポイント
  * Honoアプリケーションを経由してAPIを公開
@@ -220,27 +200,25 @@ export function showEmailDialog() {
  */
 export async function sendTodosEmail(email: string) {
   try {
-    await getEmailUseCase().sendTodosEmail(email);
+    await EmailUseCase.sendTodosEmail(email);
     return { success: true, message: 'Email sent successfully!' };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: message };
   }
 }
-
-// 従来のAPI Functions（互換性のため維持）
 export function apiListTodos() {
-  return getTodoUseCase().listTodos();
+  return TodoUseCase.listTodos();
 }
 
 export function apiAddTodo(title: string) {
-  return getTodoUseCase().addTodo(title);
+  return TodoUseCase.addTodo(title);
 }
 
 export function apiToggleTodo(id: string) {
-  return getTodoUseCase().toggleTodo(id);
+  return TodoUseCase.toggleTodo(id);
 }
 
 export function apiDeleteTodo(id: string) {
-  return getTodoUseCase().deleteTodo(id);
+  return TodoUseCase.deleteTodo(id);
 }

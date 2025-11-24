@@ -7,10 +7,6 @@
  */
 
 /**
- * Runtime Environment Detection
- */
-
-/**
  * Check if code is running in Google Apps Script environment
  * @returns true if running in GAS, false otherwise
  */
@@ -33,11 +29,7 @@ export function isNodeEnvironment(): boolean {
  * where N is the enum value (1-5)
  */
 export enum SpreadsheetType {
-  MAIN = 1,
-  TODO = 2,
-  CALENDAR = 3,
-  CONTACTS = 4,
-  NOTES = 5,
+  TODOS = 1,
 }
 
 /**
