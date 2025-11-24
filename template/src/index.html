@@ -98,9 +98,17 @@
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = todo.completed;
-            checkbox.onclick = e => {
-              e.preventDefault();
-              toggle(todo.id);
+            // Let browser handle checkbox state, then sync UI with that state
+            checkbox.onchange = () => {
+              const newCheckedState = checkbox.checked;
+              // Update UI to match checkbox state
+              if (newCheckedState) {
+                div.classList.add('completed');
+              } else {
+                div.classList.remove('completed');
+              }
+              // Send to server
+              toggle(todo.id, newCheckedState);
             };
 
             const span = document.createElement('span');
@@ -166,25 +174,22 @@
           .apiAddTodo(title);
       });
 
-      function toggle(id) {
-        // Optimistic UI update
+      function toggle(id, newCheckedState) {
+        // UI already updated by onchange handler
+        // Just send to server and handle errors
         const item = todoListEl.querySelector(`[data-id="${id}"]`);
-        if (item) {
-          const checkbox = item.querySelector('input[type="checkbox"]');
-          const isCompleted = item.classList.contains('completed');
-
-          // Toggle UI state
-          item.classList.toggle('completed');
-          if (checkbox) checkbox.checked = !isCompleted;
-        }
 
         google.script.run
           .withFailureHandler(err => {
+            // Rollback on error: revert checkbox and class
             if (item) {
               const checkbox = item.querySelector('input[type="checkbox"]');
-              const isCompleted = item.classList.contains('completed');
-              item.classList.toggle('completed');
-              if (checkbox) checkbox.checked = !isCompleted;
+              if (checkbox) checkbox.checked = !newCheckedState;
+              if (newCheckedState) {
+                item.classList.remove('completed');
+              } else {
+                item.classList.add('completed');
+              }
             }
             handleError(err);
             load(); // Sync with server

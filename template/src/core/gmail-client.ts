@@ -1,5 +1,25 @@
+import { isGasEnvironment } from '../config.js';
 import { getOAuthToken } from '../utils/auth.js';
 import { Fetch } from '../utils/fetch.js';
+
+/**
+ * Environment-aware Base64url encoding
+ * GAS: Uses Utilities.base64EncodeWebSafe()
+ * Node.js: Uses Buffer.from().toString('base64url')
+ */
+function base64urlEncode(str: string): string {
+  if (isGasEnvironment()) {
+    // GAS環境: Utilities.base64EncodeWebSafe()を使用
+    return Utilities.base64EncodeWebSafe(str);
+  } else {
+    // Node.js環境: Bufferを使用
+    return Buffer.from(str, 'utf-8')
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+}
 
 /**
  * Gmail client with methods for interacting with Gmail API
@@ -52,10 +72,7 @@ export const GmailClient = ((authToken: string | null = null) => {
     ].join('\n');
 
     // Base64url エンコード
-    const encodedMessage = btoa(unescape(encodeURIComponent(message)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    const encodedMessage = base64urlEncode(message);
 
     const response = await Fetch.request(
       'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
