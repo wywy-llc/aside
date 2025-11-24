@@ -33,13 +33,15 @@ export const UniversalTodoRepo = (() => {
     const getTodos = async (): Promise<Todo[]> => {
       const response = await SheetsClient.batchGet(spreadsheetId, [TODO_RANGE]);
       const rows = response.valueRanges?.[0]?.values || [];
-      return rows.map((row: string[]) => ({
-        id: row[0],
-        title: row[1],
-        completed: row[2] === 'TRUE',
-        createdAt: row[3],
-        updatedAt: row[4],
-      }));
+      return rows
+        .filter((row: string[]) => row && row[0] && row[0].trim() !== '') // Skip empty rows
+        .map((row: string[]) => ({
+          id: row[0],
+          title: row[1],
+          completed: row[2] === 'TRUE',
+          createdAt: row[3],
+          updatedAt: row[4],
+        }));
     };
 
     const addTodo = async (title: string): Promise<Todo> => {
@@ -101,20 +103,14 @@ export const UniversalTodoRepo = (() => {
       const index = todos.findIndex(t => t.id === id);
       if (index === -1) throw new Error(`Todo ${id} not found`);
 
-      const rowIndex = index + 1;
+      const rowNumber = index + 2; // +1 for header, +1 for 0-index
 
-      const request = {
-        deleteDimension: {
-          range: {
-            sheetId: 0,
-            dimension: 'ROWS',
-            startIndex: rowIndex,
-            endIndex: rowIndex + 1,
-          },
-        },
-      };
-
-      await SheetsClient.batchUpdate(spreadsheetId, [request]);
+      // Use clearValues instead of deleteDimension to avoid sheetId issues
+      // This marks the row as empty rather than physically deleting it
+      const range = `Todos!A${rowNumber}:E${rowNumber}`;
+      await SheetsClient.updateValues(spreadsheetId, range, [
+        ['', '', '', '', ''],
+      ]);
     };
 
     return {

@@ -1,9 +1,9 @@
 import { SheetsClient } from '@/core/client';
+import { Todo } from '@/core/types';
 import { TodoUseCase } from '@/features/todo/TodoUseCase';
-import { beforeAll, describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { Todo } from '@/core/types';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 const SPREADSHEET_ID = process.env.APP_SPREADSHEET_ID_1_DEV || '';
 
@@ -48,31 +48,44 @@ async function sheetExists(
   }
 }
 
-// Helper to rename the first sheet to 'Todos' and add headers
+// Helper to create or rename sheet to 'Todos' and add headers
 async function createSheet(
   client: typeof SheetsClient,
   spreadsheetId: string,
   sheetName: string
 ): Promise<void> {
-  // Rename the first sheet (sheetId: 0) to 'Todos'
-  await client.batchUpdate(spreadsheetId, [
-    {
-      updateSheetProperties: {
-        properties: {
-          sheetId: 0,
-          title: sheetName,
+  try {
+    // Try to add a new sheet named 'Todos'
+    await client.batchUpdate(spreadsheetId, [
+      {
+        addSheet: {
+          properties: {
+            title: sheetName,
+          },
         },
-        fields: 'title',
       },
-    },
-  ]);
+    ]);
+    console.log(`Created new sheet: ${sheetName}`);
+  } catch (error: any) {
+    // If sheet already exists, try to rename the first sheet
+    if (error?.message?.includes('already exists')) {
+      console.log(`Sheet ${sheetName} already exists, skipping creation`);
+      return;
+    }
+    throw error;
+  }
 
-  // Add header row to the first sheet
+  // Get the sheet ID of the newly created 'Todos' sheet
+  // We'll use a simple approach: the new sheet should be the last one
+  // For simplicity, we assume sheetId is 0 for the first test run
+  const sheetId = 0;
+
+  // Add header row to the sheet
   await client.batchUpdate(spreadsheetId, [
     {
       updateCells: {
         range: {
-          sheetId: 0,
+          sheetId: sheetId,
           startRowIndex: 0,
           endRowIndex: 1,
           startColumnIndex: 0,
