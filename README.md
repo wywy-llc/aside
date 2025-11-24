@@ -1,11 +1,12 @@
 # wyside
 
-> **Note**: This project is under active development, and there may be many imperfections. Your understanding is appreciated.
+> **Note**:
+>
+> - This project is under active development, and there may be many imperfections. Your understanding is appreciated.
+> - This is a fork of [@google/aside](https://github.com/google/aside), evolved to support AI-native workflows and unified architectures.
 
 [![npm version](https://badge.fury.io/js/%40wywyjp%2Fwyside.svg)](https://badge.fury.io/js/%40wywyjp%2Fwyside)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-> **Note**: This is a fork of [@google/aside](https://github.com/google/aside), evolved to support AI-native workflows and unified architectures.
 
 ## Overview
 
