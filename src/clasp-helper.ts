@@ -64,10 +64,14 @@ export class ClaspHelper {
   async clean(rootDir: string) {
     debugLog('clean clasp artifacts', { rootDir });
     // Remove all clasp project artifacts
-    await fs.remove(path.join(rootDir, '.clasp.json'));
-    await fs.remove('.clasp.json');
-    await fs.remove('.clasp-dev.json');
-    await fs.remove('.clasp-prod.json');
+    await fs.rm(path.join(rootDir, '.clasp.json'), {
+      force: true,
+      recursive: true,
+    });
+    await fs.rm('appsscript.json', { force: true });
+    await fs.rm('.clasp.json', { force: true });
+    await fs.rm('.clasp-dev.json', { force: true });
+    await fs.rm('.clasp-prod.json', { force: true });
 
     // Make sure root dir exists
     await fs.mkdirs(rootDir);
@@ -110,7 +114,7 @@ export class ClaspHelper {
   async create(title: string, scriptIdProd: string, rootDir: string) {
     // Backup appsscript.json if it exists (e.g. from template)
     let appsscriptBackup: string | null = null;
-    if (await fs.pathExists('appsscript.json')) {
+    if (await fs.exists('appsscript.json')) {
       appsscriptBackup = await fs.readFile('appsscript.json', 'utf8');
       debugLog('Backed up existing appsscript.json');
     }

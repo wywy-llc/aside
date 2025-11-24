@@ -13,6 +13,7 @@ export default tseslint.config(
   ...tseslint.configs.recommendedTypeChecked,
   prettierConfig,
   {
+    files: ['**/*.{ts,tsx,cts,mts}'],
     plugins: {
       prettier: prettierPlugin,
     },
