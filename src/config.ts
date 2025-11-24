@@ -9,8 +9,11 @@ export const config: {
   filesMerge: Record<string, string>;
 } = {
   dependencies: [
+    '@babel/core',
+    '@babel/preset-env',
     '@hono/node-server',
     '@google/clasp',
+    '@rollup/plugin-babel',
     '@rollup/plugin-commonjs',
     '@rollup/plugin-node-resolve',
     '@rollup/plugin-replace',

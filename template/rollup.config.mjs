@@ -2,6 +2,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import dotenv from 'dotenv';
+import { babel } from '@rollup/plugin-babel';
 import cleanup from 'rollup-plugin-cleanup';
 import prettier from 'rollup-plugin-prettier';
 import typescript from 'rollup-plugin-typescript2';
@@ -82,6 +83,21 @@ export default {
     typescript({
       tsconfig: 'tsconfig.json',
       exclude: ['test/**/*', '**/*.test.ts', 'src/server.ts'],
+    }),
+    // Transpile modern syntax (e.g., class fields) for GAS runtime compatibility
+    babel({
+      babelHelpers: 'bundled',
+      extensions: ['.ts', '.js'],
+      include: ['src/**/*', 'node_modules/hono/**'],
+      presets: [
+        [
+          '@babel/preset-env',
+          {
+            targets: { esmodules: false },
+            bugfixes: true,
+          },
+        ],
+      ],
     }),
     // Remove Node.js-only code for GAS deployment
     removeNodeCode(),
