@@ -22,7 +22,9 @@ export default defineConfig(
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['*.js'],
+        },
         tsconfigRootDir: __dirname,
       },
       globals: {
