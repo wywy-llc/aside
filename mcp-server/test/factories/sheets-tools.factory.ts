@@ -28,6 +28,40 @@ export interface NamedRange {
   range?: sheets_v4.Schema$GridRange;
 }
 
+// ===== Preset Definitions =====
+
+/**
+ * SetupNamedRangeArgs プリセット定義カタログ（Single Source of Truth）
+ */
+const SETUP_NAMED_RANGE_PRESETS = {
+  todoRange: {
+    rangeName: 'TODO_RANGE',
+    range: 'Todos!E:E',
+  },
+  withQuotedSheetName: {
+    rangeName: 'TEST_RANGE',
+    range: "'Sheet Name'!A1:B2",
+  },
+  withEscapedChars: {
+    rangeName: 'TEST_RANGE',
+    range: 'Todos\\!A1:B2',
+  },
+  columnRange: {
+    rangeName: 'COLUMN_RANGE',
+    range: 'Todos!A:C',
+  },
+  rowRange: {
+    rangeName: 'ROW_RANGE',
+    range: 'Todos!1:5',
+  },
+  invalidRange: {
+    range: 'InvalidFormat',
+  },
+  emptySpreadsheetId: {
+    spreadsheetId: '',
+  },
+} as const;
+
 // ============================================
 // Factory Instances
 // ============================================
@@ -74,6 +108,17 @@ const namedRangeFactory = Factory.Sync.makeFactory<NamedRange>({
   name: Factory.each(i => `RANGE_${i}`),
 });
 
+/**
+ * プリセット生成ヘルパー（DRY原則適用）
+ * @internal
+ */
+const createPreset =
+  (
+    definition: (typeof SETUP_NAMED_RANGE_PRESETS)[keyof typeof SETUP_NAMED_RANGE_PRESETS]
+  ) =>
+  (overrides?: Partial<SetupNamedRangeArgs>) =>
+    setupNamedRangeArgsFactory.build({ ...definition, ...overrides });
+
 // ============================================
 // Exported Factory Objects
 // ============================================
@@ -117,106 +162,45 @@ export const SetupNamedRangeArgsFactory = {
 
   /**
    * TODO_RANGE プリセット
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.todoRange();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.todoRange();
    */
-  todoRange: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      rangeName: 'TODO_RANGE',
-      range: 'Todos!E:E',
-      ...overrides,
-    }),
+  todoRange: createPreset(SETUP_NAMED_RANGE_PRESETS.todoRange),
 
   /**
    * シングルクォート付きシート名プリセット
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.withQuotedSheetName();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.withQuotedSheetName();
    */
-  withQuotedSheetName: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      rangeName: 'TEST_RANGE',
-      range: "'Sheet Name'!A1:B2",
-      ...overrides,
-    }),
+  withQuotedSheetName: createPreset(SETUP_NAMED_RANGE_PRESETS.withQuotedSheetName),
 
   /**
    * シェルエスケープされた記号プリセット
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.withEscapedChars();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.withEscapedChars();
    */
-  withEscapedChars: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      rangeName: 'TEST_RANGE',
-      range: 'Todos\\!A1:B2',
-      ...overrides,
-    }),
+  withEscapedChars: createPreset(SETUP_NAMED_RANGE_PRESETS.withEscapedChars),
 
   /**
    * 列全体の範囲プリセット
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.columnRange();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.columnRange();
    */
-  columnRange: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      rangeName: 'COLUMN_RANGE',
-      range: 'Todos!A:C',
-      ...overrides,
-    }),
+  columnRange: createPreset(SETUP_NAMED_RANGE_PRESETS.columnRange),
 
   /**
    * 行全体の範囲プリセット
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.rowRange();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.rowRange();
    */
-  rowRange: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      rangeName: 'ROW_RANGE',
-      range: 'Todos!1:5',
-      ...overrides,
-    }),
+  rowRange: createPreset(SETUP_NAMED_RANGE_PRESETS.rowRange),
 
   /**
    * 無効な範囲形式プリセット（エラーテスト用）
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.invalidRange();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.invalidRange();
    */
-  invalidRange: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      range: 'InvalidFormat', // "!" がない
-      ...overrides,
-    }),
+  invalidRange: createPreset(SETUP_NAMED_RANGE_PRESETS.invalidRange),
 
   /**
    * 空のスプレッドシートIDプリセット（エラーテスト用）
-   *
-   * @example
-   * ```typescript
-   * const args = SetupNamedRangeArgsFactory.emptySpreadsheetId();
-   * ```
+   * @example const args = SetupNamedRangeArgsFactory.emptySpreadsheetId();
    */
-  emptySpreadsheetId: (overrides?: Partial<SetupNamedRangeArgs>) =>
-    setupNamedRangeArgsFactory.build({
-      spreadsheetId: '',
-      ...overrides,
-    }),
+  emptySpreadsheetId: createPreset(SETUP_NAMED_RANGE_PRESETS.emptySpreadsheetId),
 } as const;
 
 /**

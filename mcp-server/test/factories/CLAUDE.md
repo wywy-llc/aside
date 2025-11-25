@@ -27,6 +27,8 @@ graph LR
     A -->|単純/フラット| C[Factory.ts]
     B -->|メソッドチェーン| D[可読性高]
     C -->|makeFactory| E[シンプル生成]
+    C -->|プリセット≥3| F[Meta]
+    F -->|カタログ+Helper| G[DRY徹底]
 ```
 
 ### ✅ Builder（第一推奨）
@@ -54,6 +56,50 @@ const userFactory = Factory.Sync.makeFactory<User>({
   id: Factory.each(i => i),
   name: Factory.each(i => `user-${i}`),
 });
+```
+
+### ✅ Meta（プリセット≥3で必須）
+
+```yaml
+適用: プリセット3個以上
+利点: DRY徹底 | SSOT | スケーラブル | 保守O(1)
+原則: データ駆動型 | 重複コード0%
+構造: カタログ定義→Helper→1行メソッド
+```
+
+```typescript
+// 1. プリセット定義カタログ（Single Source of Truth）
+const USER_PRESETS = {
+  admin: { role: 'admin', permissions: ['all'] },
+  guest: { role: 'guest', permissions: [] },
+  moderator: { role: 'moderator', permissions: ['read', 'write'] },
+} as const;
+
+// 2. Helper（共通ロジック集約）
+const createPreset = (def: typeof USER_PRESETS[keyof typeof USER_PRESETS]) =>
+  (overrides?: Partial<User>) => userFactory.build({ ...def, ...overrides });
+
+// 3. 1行メソッド（重複排除）
+export const UserFactory = {
+  resetSequenceNumber: () => userFactory.resetSequenceNumber(),
+  build: (overrides?: Partial<User>) => userFactory.build(overrides),
+
+  /** 管理者プリセット */
+  admin: createPreset(USER_PRESETS.admin),
+  /** ゲストプリセット */
+  guest: createPreset(USER_PRESETS.guest),
+  /** モデレータープリセット */
+  moderator: createPreset(USER_PRESETS.moderator),
+} as const;
+```
+
+**判断フロー**:
+
+```yaml
+プリセット数判定:
+  0-2個: Factory.ts標準（現状維持）
+  3個以上: ✅Meta必須（重複排除）
+  理由: 保守コスト O(n)→O(1)、重複コード0%実現
 ```
 
 ---
@@ -157,6 +203,22 @@ export const TestScenarioFactory = {
     return { user, orders };
   },
 };
+```
+
+---
+
+## アンチパターン
+
+```yaml
+❌禁止:
+  プリセット≥3で従来型: 重複コード発生→保守コスト高
+  カタログ未使用: データ分散→整合性リスク
+  createPreset未使用: 共通ロジック重複→DRY違反
+
+✅対策:
+  プリセット増加時: 即Meta移行（operation-catalog.factory.ts参照）
+  定義の一元化: XXX_PRESETS as const
+  型安全性保持: typeof PRESETS[keyof typeof PRESETS]
 ```
 
 ---
