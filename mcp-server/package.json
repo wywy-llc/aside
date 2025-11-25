@@ -7,6 +7,9 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc --watch",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
     "test:tool": "tsx scripts/test-tool.ts"
   },
   "dependencies": {
@@ -21,7 +24,9 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.13",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.13"
   }
 }
