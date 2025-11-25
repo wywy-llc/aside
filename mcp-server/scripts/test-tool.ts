@@ -29,20 +29,111 @@ import {
 // Load .env
 config();
 
-const args = process.argv.slice(2);
-const toolName = args[0];
+// ===== Type Definitions =====
 
-async function main() {
-  if (!toolName) {
-    console.error(`
+interface ArgumentDefinition {
+  name: string;
+  required: boolean;
+  index: number;
+  transform?: (value: string) => unknown;
+}
+
+interface ToolDefinition<T = Record<string, unknown>> {
+  args: ArgumentDefinition[];
+  handler: (params: T) => Promise<unknown>;
+}
+
+// ===== Tool Registry =====
+
+const TOOL_REGISTRY = {
+  sync_secrets_from_gcp_to_local: {
+    args: [
+      { name: 'projectId', required: true, index: 1 },
+      { name: 'spreadsheetIdDev', required: false, index: 2 },
+      { name: 'spreadsheetIdProd', required: false, index: 3 },
+    ],
+    handler: syncSecretsFromGcpToLocal,
+  } satisfies ToolDefinition<SyncSecretsFromGcpToLocalArgs>,
+
+  scaffold_feature: {
+    args: [
+      { name: 'featureName', required: true, index: 1 },
+      {
+        name: 'operations',
+        required: true,
+        index: 2,
+        transform: (value: string) => value.split(','),
+      },
+    ],
+    handler: scaffoldFeature,
+  } satisfies ToolDefinition<ScaffoldFeatureArgs>,
+
+  setup_named_range: {
+    args: [
+      { name: 'spreadsheetId', required: true, index: 1 },
+      { name: 'rangeName', required: true, index: 2 },
+      { name: 'range', required: true, index: 3 },
+    ],
+    handler: setupNamedRange,
+  } satisfies ToolDefinition<SetupNamedRangeArgs>,
+
+  drive_create_folder: {
+    args: [
+      { name: 'name', required: true, index: 1 },
+      { name: 'parentId', required: false, index: 2 },
+    ],
+    handler: driveCreateFolder,
+  } satisfies ToolDefinition<CreateFolderArgs>,
+
+  gmail_send_email: {
+    args: [
+      { name: 'to', required: true, index: 1 },
+      { name: 'subject', required: true, index: 2 },
+      { name: 'body', required: true, index: 3 },
+    ],
+    handler: gmailSendEmail,
+  } satisfies ToolDefinition<SendEmailArgs>,
+} as const;
+
+type ToolName = keyof typeof TOOL_REGISTRY;
+
+// ===== Helper Functions =====
+
+function buildParams(
+  rawArgs: string[],
+  argDefs: ArgumentDefinition[],
+): Record<string, unknown> {
+  const params: Record<string, unknown> = {};
+
+  for (const def of argDefs) {
+    const value = rawArgs[def.index];
+
+    if (def.required && !value) {
+      throw new Error(`Missing required argument: ${def.name}`);
+    }
+
+    if (value) {
+      params[def.name] = def.transform ? def.transform(value) : value;
+    }
+  }
+
+  return params;
+}
+
+function generateHelpMessage(): string {
+  const toolLines = Object.keys(TOOL_REGISTRY).map((name) => {
+    const tool = TOOL_REGISTRY[name as ToolName];
+    const args = tool.args
+      .map((a) => (a.required ? `<${a.name}>` : `[${a.name}]`))
+      .join(' ');
+    return `  ${name} ${args}`;
+  });
+
+  return `
 Usage: npx tsx scripts/test-tool.ts <tool-name> [args...]
 
 Available tools:
-  sync_secrets_from_gcp_to_local <projectId> [spreadsheetIdDev] [spreadsheetIdProd]
-  scaffold_feature <featureName> <operation1,operation2,...>
-  setup_named_range <spreadsheetId> <rangeName> <range>
-  drive_create_folder <folderName> [parentId]
-  gmail_send_email <to> <subject> <body>
+${toolLines.join('\n')}
 
 Examples:
   npx tsx scripts/test-tool.ts sync_secrets_from_gcp_to_local my-project-123
@@ -51,71 +142,33 @@ Examples:
   npx tsx scripts/test-tool.ts setup_named_range 1ABC123 TODO_RANGE "Sheet1!A2:E"
   npx tsx scripts/test-tool.ts drive_create_folder "Test Folder"
   npx tsx scripts/test-tool.ts gmail_send_email "test@example.com" "Subject" "Body"
-`);
+`;
+}
+
+// ===== Main Execution =====
+
+async function main() {
+  const args = process.argv.slice(2);
+  const toolName = args[0] as ToolName | undefined;
+
+  if (!toolName) {
+    console.error(generateHelpMessage());
+    process.exit(1);
+  }
+
+  const tool = TOOL_REGISTRY[toolName];
+  if (!tool) {
+    console.error(`Unknown tool: ${toolName}`);
+    console.error(generateHelpMessage());
     process.exit(1);
   }
 
   try {
-    let result;
+    const params = buildParams(args, tool.args);
+    console.log(`Running ${toolName} with:`, params);
 
-    switch (toolName) {
-      case 'sync_secrets_from_gcp_to_local': {
-        const params: SyncSecretsFromGcpToLocalArgs = {
-          projectId: args[1],
-          spreadsheetIdDev: args[2],
-          spreadsheetIdProd: args[3],
-        };
-        console.log('Running sync_secrets_from_gcp_to_local with:', params);
-        result = await syncSecretsFromGcpToLocal(params);
-        break;
-      }
-
-      case 'scaffold_feature': {
-        const params: ScaffoldFeatureArgs = {
-          featureName: args[1],
-          operations: args[2]?.split(',') || [],
-        };
-        console.log('Running scaffold_feature with:', params);
-        result = await scaffoldFeature(params);
-        break;
-      }
-
-      case 'setup_named_range': {
-        const params: SetupNamedRangeArgs = {
-          spreadsheetId: args[1],
-          rangeName: args[2],
-          range: args[3],
-        };
-        console.log('Running setup_named_range with:', params);
-        result = await setupNamedRange(params);
-        break;
-      }
-
-      case 'drive_create_folder': {
-        const params: CreateFolderArgs = {
-          name: args[1],
-          parentId: args[2],
-        };
-        console.log('Running drive_create_folder with:', params);
-        result = await driveCreateFolder(params);
-        break;
-      }
-
-      case 'gmail_send_email': {
-        const params: SendEmailArgs = {
-          to: args[1],
-          subject: args[2],
-          body: args[3],
-        };
-        console.log('Running gmail_send_email with:', params);
-        result = await gmailSendEmail(params);
-        break;
-      }
-
-      default:
-        console.error(`Unknown tool: ${toolName}`);
-        process.exit(1);
-    }
+    // Type assertion is safe here because buildParams constructs params according to tool.args
+    const result = await tool.handler(params as never);
 
     console.log('\n✅ Result:');
     console.log(JSON.stringify(result, null, 2));
