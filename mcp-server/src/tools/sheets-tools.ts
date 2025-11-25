@@ -290,12 +290,15 @@ export async function setupNamedRange(
 
     const sheets = await getSheetsClient();
 
-    // A1記法をパース（例: "Sheet1!A1:B2" -> sheetName + cellRange）
+    // A1記法をパース（例: "Sheet1!A1:B2" or "'Sheet Name'!A1:B2" -> sheetName + cellRange）
     const rangeParts = range.split('!');
-    const [sheetName, cellRange] = [
-      rangeParts[0],
-      rangeParts.slice(1).join('!'),
-    ];
+    let sheetName = rangeParts[0];
+    const cellRange = rangeParts.slice(1).join('!');
+
+    // シート名がシングルクォートで囲まれている場合は削除
+    if (sheetName.startsWith("'") && sheetName.endsWith("'")) {
+      sheetName = sheetName.slice(1, -1);
+    }
 
     if (!sheetName || !cellRange) {
       throw new Error('Range must be in format "SheetName!A1:B2"');
