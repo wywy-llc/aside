@@ -1,6 +1,6 @@
 import * as Factory from 'factory.ts';
-import type { FeatureSchema } from '@/tools/schema-generator';
-import type { OperationContext } from '@/tools/operation-catalog';
+import { OperationContext } from '../../src/tools/operation-catalog';
+import { FeatureSchema } from '../../src/tools/schema-generator';
 
 /**
  * FeatureSchema ファクトリー（内部）

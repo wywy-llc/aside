@@ -4,11 +4,11 @@ import {
   generateRowToObject,
   generateTypeDefinition,
   generateValidation,
-} from '@/tools/schema-generator';
+} from '../../src/tools/schema-generator.js';
 import {
   FeatureSchemaFactory,
   resetAllFactories,
-} from 'test/factories/operation-catalog.factory';
+} from '../factories/operation-catalog.factory.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('Schema Generator', () => {

@@ -6,12 +6,12 @@ import {
   getOperationDefinition,
   getOperationsByCategory,
   type OperationContext,
-} from '@/tools/operation-catalog';
+} from '../../src/tools/operation-catalog.js';
 import {
   FeatureSchemaFactory,
   OperationContextFactory,
   resetAllFactories,
-} from 'test/factories/operation-catalog.factory';
+} from '../factories/operation-catalog.factory.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('Operation Catalog', () => {
