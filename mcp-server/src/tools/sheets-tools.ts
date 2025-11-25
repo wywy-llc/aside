@@ -98,17 +98,44 @@ function parseCoordinate(coord: string): Coordinate {
 /**
  * A1記法をGridRangeに変換
  *
- * @param a1Notation - A1記法の範囲（例: "A1:B2"）
+ * @param a1Notation - A1記法の範囲（例: "A1:B2", "E:E", "1:5"）
  * @param sheetId - シートID
  * @returns GridRange形式の範囲
  * @throws 無効なA1記法の場合
- * @remarks 単一セル（"A1"）や範囲（"A1:B2"）の両方に対応
+ * @remarks 単一セル（"A1"）、範囲（"A1:B2"）、列全体（"E:E"）、行全体（"1:5"）に対応
  */
 function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
   const parts = a1Notation.split(':');
   const start = parts[0];
   const end = parts[1] || start;
 
+  // 列全体の指定（例: "E:E", "A:C"）
+  if (/^[A-Z]+$/.test(start) && /^[A-Z]+$/.test(end)) {
+    const startCol = columnLetterToIndex(start);
+    const endCol = columnLetterToIndex(end);
+    return {
+      sheetId,
+      startRowIndex: 0,
+      endRowIndex: undefined as any, // 行全体を表すためにundefined
+      startColumnIndex: startCol,
+      endColumnIndex: endCol + 1,
+    };
+  }
+
+  // 行全体の指定（例: "1:1", "5:10"）
+  if (/^\d+$/.test(start) && /^\d+$/.test(end)) {
+    const startRow = parseInt(start, 10) - 1;
+    const endRow = parseInt(end, 10) - 1;
+    return {
+      sheetId,
+      startRowIndex: startRow,
+      endRowIndex: endRow + 1,
+      startColumnIndex: 0,
+      endColumnIndex: undefined as any, // 列全体を表すためにundefined
+    };
+  }
+
+  // 通常のセル範囲（例: "A1:B2", "A1"）
   const s = parseCoordinate(start);
   const e = parseCoordinate(end);
 
@@ -119,6 +146,20 @@ function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
     startColumnIndex: s.colIndex,
     endColumnIndex: e.colIndex + 1,
   };
+}
+
+/**
+ * 列の文字列をインデックスに変換（A=0, B=1, Z=25, AA=26...）
+ *
+ * @param col - 列の文字列（例: "A", "Z", "AA"）
+ * @returns 列のインデックス（0始まり）
+ */
+function columnLetterToIndex(col: string): number {
+  let index = 0;
+  for (let i = 0; i < col.length; i++) {
+    index = index * 26 + (col.charCodeAt(i) - 64);
+  }
+  return index - 1;
 }
 
 /**
@@ -238,6 +279,7 @@ export async function setupNamedRange(
 
   try {
     const { spreadsheetId, rangeName, range } = args;
+
     if (!spreadsheetId || !rangeName || !range) {
       throw new Error('spreadsheetId, rangeName, and range are required');
     }
@@ -301,11 +343,13 @@ export async function setupNamedRange(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const stackTrace = error instanceof Error ? error.stack : '';
+
     return {
       content: [
         {
           type: 'text',
-          text: `Error: ${errorMessage}\nLogs:\n${messages.join('\n')}`,
+          text: `Error: ${errorMessage}\n\nStack trace:\n${stackTrace}\n\nLogs:\n${messages.join('\n')}`,
         },
       ],
       isError: true,

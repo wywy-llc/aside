@@ -29,7 +29,7 @@ import {
 } from './tools/sync-secrets-from-gcp-to-local.js';
 
 // 環境変数を読み込み
-config();
+config({ quiet: true });
 
 // サーバー設定
 const SERVER_CONFIG = {

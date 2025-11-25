@@ -172,7 +172,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     ],
     returnType: 'void',
     generate: ctx => `
-    const remove = async (id: string): Promise<void> => {
+    const deleteById = async (id: string): Promise<void> => {
       const items = await getAll();
       const index = items.findIndex(item => item.id === id);
       if (index === -1) throw new Error(\`${ctx.featureName} \${id} not found\`);
@@ -458,8 +458,8 @@ export function generateExportsList(operationIds: string[]): string {
       const def = getOperationDefinition(id);
       if (!def) return null;
 
-      // 'delete' -> 'remove' のマッピング
-      const exportName = id === 'delete' ? 'remove' : id;
+      // 'delete' -> 'deleteById' のマッピング
+      const exportName = id === 'delete' ? 'deleteById' : id;
       return exportName;
     })
     .filter(Boolean);

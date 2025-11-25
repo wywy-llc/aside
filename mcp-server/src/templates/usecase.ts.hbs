@@ -46,15 +46,15 @@ export const {{featureName}}UseCase = (() => {
     await repo.update(id, updates);
   };
 
-  const remove = async (id: string): Promise<void> => {
-    await repo.remove(id);
+  const deleteById = async (id: string): Promise<void> => {
+    await repo.delete(id);
   };
 
   return {
     list,
     create,
     update,
-    remove,
+    delete: deleteById,
   } as const;
 {{else}}
   // TODO: Update SpreadsheetType to match your feature
