@@ -1,6 +1,150 @@
 import * as Factory from 'factory.ts';
 import { OperationContext } from '../../src/tools/operation-catalog';
-import { FeatureSchema } from '../../src/tools/schema-generator';
+import { FeatureSchema, FieldSchema } from '../../src/tools/schema-generator';
+
+// ===== Preset Definitions =====
+
+/**
+ * FeatureSchema プリセット定義カタログ（Single Source of Truth）
+ */
+const FEATURE_SCHEMA_PRESETS = {
+  task: {
+    fields: [
+      { name: 'id', type: 'string', column: 'A', required: true },
+      { name: 'title', type: 'string', column: 'B', required: true },
+    ] as FieldSchema[],
+    range: 'Tasks!A2:E',
+    rangeName: 'TASK_RANGE',
+  },
+  item: {
+    fields: [
+      { name: 'id', type: 'string', column: 'A', required: true },
+      { name: 'title', type: 'string', column: 'B', required: true },
+    ] as FieldSchema[],
+    range: 'Items!A2:E',
+    rangeName: 'ITEM_RANGE',
+  },
+  taskWithCompletion: {
+    fields: [
+      { name: 'id', type: 'string', column: 'A', required: true },
+      { name: 'title', type: 'string', column: 'B', required: true },
+      { name: 'completed', type: 'boolean', column: 'C' },
+    ] as FieldSchema[],
+    range: 'Tasks!A2:E',
+    rangeName: 'TASK_RANGE',
+  },
+  user: {
+    fields: [
+      { name: 'name', type: 'string', column: 'A', required: true },
+      { name: 'age', type: 'number', column: 'B' },
+    ] as FieldSchema[],
+    range: 'Users!A2:B',
+    rangeName: 'USER_RANGE',
+  },
+  event: {
+    fields: [
+      { name: 'createdAt', type: 'date', column: 'A', required: true },
+    ] as FieldSchema[],
+    range: 'Events!A2:A',
+    rangeName: 'EVENT_RANGE',
+  },
+  userWithEmail: {
+    fields: [
+      {
+        name: 'email',
+        type: 'string',
+        column: 'A',
+        description: 'User email address',
+      },
+    ] as FieldSchema[],
+    range: 'Users!A2:A',
+    rangeName: 'USER_RANGE',
+  },
+  userWithActive: {
+    fields: [
+      {
+        name: 'active',
+        type: 'boolean',
+        column: 'A',
+        sheetsFormat: 'TRUE/FALSE',
+      },
+    ] as FieldSchema[],
+    range: 'Users!A2:A',
+    rangeName: 'USER_RANGE',
+  },
+  product: {
+    fields: [
+      { name: 'count', type: 'number', column: 'A' },
+      { name: 'price', type: 'number', column: 'B' },
+    ] as FieldSchema[],
+    range: 'Products!A2:B',
+    rangeName: 'PRODUCT_RANGE',
+  },
+  dataUnsorted: {
+    fields: [
+      { name: 'third', type: 'string', column: 'C' },
+      { name: 'first', type: 'string', column: 'A' },
+      { name: 'second', type: 'string', column: 'B' },
+    ] as FieldSchema[],
+    range: 'Data!A2:C',
+    rangeName: 'DATA_RANGE',
+  },
+  setting: {
+    fields: [
+      {
+        name: 'enabled',
+        type: 'boolean',
+        column: 'A',
+        sheetsFormat: 'TRUE/FALSE',
+      },
+    ] as FieldSchema[],
+    range: 'Settings!A2:A',
+    rangeName: 'SETTING_RANGE',
+  },
+  itemWithQuantity: {
+    fields: [{ name: 'quantity', type: 'number', column: 'A' }] as FieldSchema[],
+    range: 'Items!A2:A',
+    rangeName: 'ITEM_RANGE',
+  },
+  userWithEmailRequired: {
+    fields: [
+      { name: 'email', type: 'string', column: 'A', required: true },
+      { name: 'age', type: 'number', column: 'B' },
+    ] as FieldSchema[],
+    range: 'Users!A2:B',
+    rangeName: 'USER_RANGE',
+  },
+  note: {
+    fields: [
+      { name: 'note', type: 'string', column: 'A' },
+      { name: 'tag', type: 'string', column: 'B' },
+    ] as FieldSchema[],
+    range: 'Notes!A2:B',
+    rangeName: 'NOTE_RANGE',
+  },
+  itemWithAllTypes: {
+    fields: [
+      { name: 'name', type: 'string', column: 'A' },
+      { name: 'count', type: 'number', column: 'B' },
+      { name: 'active', type: 'boolean', column: 'C' },
+      { name: 'createdAt', type: 'date', column: 'D' },
+    ] as FieldSchema[],
+    range: 'Items!A2:D',
+    rangeName: 'ITEM_RANGE',
+  },
+  empty: {
+    fields: [] as FieldSchema[],
+    range: 'Empty!A2:A',
+    rangeName: 'EMPTY_RANGE',
+  },
+  single: {
+    fields: [{ name: 'value', type: 'string', column: 'A' }] as FieldSchema[],
+    range: 'Single!A2:A',
+    rangeName: 'SINGLE_RANGE',
+  },
+} as const;
+
+// ===== Factory Implementations =====
 
 /**
  * FeatureSchema ファクトリー（内部）
@@ -14,6 +158,15 @@ const featureSchemaFactory = Factory.Sync.makeFactory<FeatureSchema>({
   range: Factory.each(i => `Sheet${i}!A2:E`),
   rangeName: Factory.each(i => `RANGE_${i}`),
 });
+
+/**
+ * プリセット生成ヘルパー（DRY原則適用）
+ * @internal
+ */
+const createPreset =
+  (definition: (typeof FEATURE_SCHEMA_PRESETS)[keyof typeof FEATURE_SCHEMA_PRESETS]) =>
+  (overrides?: Partial<FeatureSchema>) =>
+    featureSchemaFactory.build({ ...definition, ...overrides });
 
 /**
  * OperationContext ファクトリー（内部）
@@ -68,313 +221,99 @@ export const FeatureSchemaFactory = {
 
   /**
    * Task プリセット（Todos シート）
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.task();
-   * ```
+   * @example const schema = FeatureSchemaFactory.task();
    */
-  task: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'id', type: 'string', column: 'A', required: true },
-        { name: 'title', type: 'string', column: 'B', required: true },
-      ],
-      range: 'Tasks!A2:E',
-      rangeName: 'TASK_RANGE',
-      ...overrides,
-    }),
+  task: createPreset(FEATURE_SCHEMA_PRESETS.task),
 
   /**
    * Item プリセット（Items シート）
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.item();
-   * ```
+   * @example const schema = FeatureSchemaFactory.item();
    */
-  item: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'id', type: 'string', column: 'A', required: true },
-        { name: 'title', type: 'string', column: 'B', required: true },
-      ],
-      range: 'Items!A2:E',
-      rangeName: 'ITEM_RANGE',
-      ...overrides,
-    }),
+  item: createPreset(FEATURE_SCHEMA_PRESETS.item),
 
   /**
    * 完全なTask プリセット（id, title, completed）
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.taskWithCompletion();
-   * ```
+   * @example const schema = FeatureSchemaFactory.taskWithCompletion();
    */
-  taskWithCompletion: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'id', type: 'string', column: 'A', required: true },
-        { name: 'title', type: 'string', column: 'B', required: true },
-        { name: 'completed', type: 'boolean', column: 'C' },
-      ],
-      range: 'Tasks!A2:E',
-      rangeName: 'TASK_RANGE',
-      ...overrides,
-    }),
+  taskWithCompletion: createPreset(FEATURE_SCHEMA_PRESETS.taskWithCompletion),
 
   /**
    * User プリセット（name, age - ageはoptional）
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.user();
-   * ```
+   * @example const schema = FeatureSchemaFactory.user();
    */
-  user: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'name', type: 'string', column: 'A', required: true },
-        { name: 'age', type: 'number', column: 'B' },
-      ],
-      range: 'Users!A2:B',
-      rangeName: 'USER_RANGE',
-      ...overrides,
-    }),
+  user: createPreset(FEATURE_SCHEMA_PRESETS.user),
 
   /**
    * Event プリセット（date型フィールド含む）
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.event();
-   * ```
+   * @example const schema = FeatureSchemaFactory.event();
    */
-  event: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'createdAt', type: 'date', column: 'A', required: true },
-      ],
-      range: 'Events!A2:A',
-      rangeName: 'EVENT_RANGE',
-      ...overrides,
-    }),
+  event: createPreset(FEATURE_SCHEMA_PRESETS.event),
 
   /**
    * User（email with description）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.userWithEmail();
-   * ```
+   * @example const schema = FeatureSchemaFactory.userWithEmail();
    */
-  userWithEmail: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        {
-          name: 'email',
-          type: 'string',
-          column: 'A',
-          description: 'User email address',
-        },
-      ],
-      range: 'Users!A2:A',
-      rangeName: 'USER_RANGE',
-      ...overrides,
-    }),
+  userWithEmail: createPreset(FEATURE_SCHEMA_PRESETS.userWithEmail),
 
   /**
    * User（boolean TRUE/FALSE format）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.userWithActive();
-   * ```
+   * @example const schema = FeatureSchemaFactory.userWithActive();
    */
-  userWithActive: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        {
-          name: 'active',
-          type: 'boolean',
-          column: 'A',
-          sheetsFormat: 'TRUE/FALSE',
-        },
-      ],
-      range: 'Users!A2:A',
-      rangeName: 'USER_RANGE',
-      ...overrides,
-    }),
+  userWithActive: createPreset(FEATURE_SCHEMA_PRESETS.userWithActive),
 
   /**
    * Product（number fields）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.product();
-   * ```
+   * @example const schema = FeatureSchemaFactory.product();
    */
-  product: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'count', type: 'number', column: 'A' },
-        { name: 'price', type: 'number', column: 'B' },
-      ],
-      range: 'Products!A2:B',
-      rangeName: 'PRODUCT_RANGE',
-      ...overrides,
-    }),
+  product: createPreset(FEATURE_SCHEMA_PRESETS.product),
 
   /**
    * Data（ソート順テスト用 - C, A, B）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.dataUnsorted();
-   * ```
+   * @example const schema = FeatureSchemaFactory.dataUnsorted();
    */
-  dataUnsorted: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'third', type: 'string', column: 'C' },
-        { name: 'first', type: 'string', column: 'A' },
-        { name: 'second', type: 'string', column: 'B' },
-      ],
-      range: 'Data!A2:C',
-      rangeName: 'DATA_RANGE',
-      ...overrides,
-    }),
+  dataUnsorted: createPreset(FEATURE_SCHEMA_PRESETS.dataUnsorted),
 
   /**
    * Setting（boolean TRUE/FALSE format）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.setting();
-   * ```
+   * @example const schema = FeatureSchemaFactory.setting();
    */
-  setting: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        {
-          name: 'enabled',
-          type: 'boolean',
-          column: 'A',
-          sheetsFormat: 'TRUE/FALSE',
-        },
-      ],
-      range: 'Settings!A2:A',
-      rangeName: 'SETTING_RANGE',
-      ...overrides,
-    }),
+  setting: createPreset(FEATURE_SCHEMA_PRESETS.setting),
 
   /**
    * Item（quantity number field）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.itemWithQuantity();
-   * ```
+   * @example const schema = FeatureSchemaFactory.itemWithQuantity();
    */
-  itemWithQuantity: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [{ name: 'quantity', type: 'number', column: 'A' }],
-      range: 'Items!A2:A',
-      rangeName: 'ITEM_RANGE',
-      ...overrides,
-    }),
+  itemWithQuantity: createPreset(FEATURE_SCHEMA_PRESETS.itemWithQuantity),
 
   /**
    * User（email required, age optional）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.userWithEmailRequired();
-   * ```
+   * @example const schema = FeatureSchemaFactory.userWithEmailRequired();
    */
-  userWithEmailRequired: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'email', type: 'string', column: 'A', required: true },
-        { name: 'age', type: 'number', column: 'B' },
-      ],
-      range: 'Users!A2:B',
-      rangeName: 'USER_RANGE',
-      ...overrides,
-    }),
+  userWithEmailRequired: createPreset(FEATURE_SCHEMA_PRESETS.userWithEmailRequired),
 
   /**
    * Note（no required fields）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.note();
-   * ```
+   * @example const schema = FeatureSchemaFactory.note();
    */
-  note: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'note', type: 'string', column: 'A' },
-        { name: 'tag', type: 'string', column: 'B' },
-      ],
-      range: 'Notes!A2:B',
-      rangeName: 'NOTE_RANGE',
-      ...overrides,
-    }),
+  note: createPreset(FEATURE_SCHEMA_PRESETS.note),
 
   /**
    * Item（all field types）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.itemWithAllTypes();
-   * ```
+   * @example const schema = FeatureSchemaFactory.itemWithAllTypes();
    */
-  itemWithAllTypes: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [
-        { name: 'name', type: 'string', column: 'A' },
-        { name: 'count', type: 'number', column: 'B' },
-        { name: 'active', type: 'boolean', column: 'C' },
-        { name: 'createdAt', type: 'date', column: 'D' },
-      ],
-      range: 'Items!A2:D',
-      rangeName: 'ITEM_RANGE',
-      ...overrides,
-    }),
+  itemWithAllTypes: createPreset(FEATURE_SCHEMA_PRESETS.itemWithAllTypes),
 
   /**
    * Empty（no fields）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.empty();
-   * ```
+   * @example const schema = FeatureSchemaFactory.empty();
    */
-  empty: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [],
-      range: 'Empty!A2:A',
-      rangeName: 'EMPTY_RANGE',
-      ...overrides,
-    }),
+  empty: createPreset(FEATURE_SCHEMA_PRESETS.empty),
 
   /**
    * Single（single field）プリセット
-   *
-   * @example
-   * ```typescript
-   * const schema = FeatureSchemaFactory.single();
-   * ```
+   * @example const schema = FeatureSchemaFactory.single();
    */
-  single: (overrides?: Partial<FeatureSchema>) =>
-    featureSchemaFactory.build({
-      fields: [{ name: 'value', type: 'string', column: 'A' }],
-      range: 'Single!A2:A',
-      rangeName: 'SINGLE_RANGE',
-      ...overrides,
-    }),
+  single: createPreset(FEATURE_SCHEMA_PRESETS.single),
 } as const;
 
 /**
