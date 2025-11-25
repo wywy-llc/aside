@@ -326,3 +326,10 @@ export const DRIVE_OPERATION_CATALOG = {
 - **Error Handling:** Return `isError: true` with user-friendly messages in the `content`.
 - **Logging:** Use `console.error` for logs (stdout is reserved for MCP JSON-RPC).
 - **Path Resolution:** Use `fileURLToPath` / `import.meta.url` for locating templates, as this runs as an ESM module.
+
+## 8. Testing Standards
+
+**テスト規約への準拠が必須:**
+
+- **テスト**: `test/CLAUDE.md`
+- **ファクトリー**: `test/factories/CLAUDE.md`
