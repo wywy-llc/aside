@@ -32,6 +32,14 @@ interface GridRange {
 }
 
 /**
+ * A1記法パース用の正規表現パターン
+ */
+const A1_PATTERNS = {
+  COLUMN_ONLY: /^[A-Z]+$/,
+  ROW_ONLY: /^\d+$/,
+} as const;
+
+/**
  * バッチ更新リクエストの型
  */
 interface BatchUpdateRequest {
@@ -83,15 +91,9 @@ function parseCoordinate(coord: string): Coordinate {
     throw new Error(`Invalid coordinate: ${coord}`);
   }
 
-  const colStr = colMatch[0];
-  let colIndex = 0;
-  for (let i = 0; i < colStr.length; i++) {
-    colIndex = colIndex * 26 + (colStr.charCodeAt(i) - 64);
-  }
-
   return {
     rowIndex: parseInt(rowMatch[0], 10) - 1,
-    colIndex: colIndex - 1,
+    colIndex: columnLetterToIndex(colMatch[0]),
   };
 }
 
@@ -110,7 +112,10 @@ function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
   const end = parts[1] || start;
 
   // 列全体の指定（例: "E:E", "A:C"）
-  if (/^[A-Z]+$/.test(start) && /^[A-Z]+$/.test(end)) {
+  if (
+    A1_PATTERNS.COLUMN_ONLY.test(start) &&
+    A1_PATTERNS.COLUMN_ONLY.test(end)
+  ) {
     const startCol = columnLetterToIndex(start);
     const endCol = columnLetterToIndex(end);
     return {
@@ -123,7 +128,7 @@ function parseA1Notation(a1Notation: string, sheetId: number): GridRange {
   }
 
   // 行全体の指定（例: "1:1", "5:10"）
-  if (/^\d+$/.test(start) && /^\d+$/.test(end)) {
+  if (A1_PATTERNS.ROW_ONLY.test(start) && A1_PATTERNS.ROW_ONLY.test(end)) {
     const startRow = parseInt(start, 10) - 1;
     const endRow = parseInt(end, 10) - 1;
     return {
@@ -163,22 +168,37 @@ function columnLetterToIndex(col: string): number {
 }
 
 /**
- * スプレッドシートからシートIDを取得
+ * スプレッドシートデータを取得（APIを1回だけ呼び出す）
  *
  * @param sheets - Sheets APIクライアント
  * @param spreadsheetId - スプレッドシートID
+ * @returns スプレッドシートデータ
+ * @remarks getSheetIdFromDataとfindExistingNamedRangeFromDataで共有するためのヘルパー
+ */
+async function getSpreadsheetData(
+  sheets: sheets_v4.Sheets,
+  spreadsheetId: string
+): Promise<sheets_v4.Schema$Spreadsheet> {
+  const { data } = await sheets.spreadsheets.get({ spreadsheetId });
+  return data;
+}
+
+/**
+ * スプレッドシートデータからシートIDを取得
+ *
+ * @param spreadsheetData - スプレッドシートデータ
  * @param sheetName - シート名
  * @returns シートID
  * @throws シートが見つからない場合
  * @remarks シート名からシートIDを逆引き
  */
-async function getSheetId(
-  sheets: sheets_v4.Sheets,
-  spreadsheetId: string,
+function getSheetIdFromData(
+  spreadsheetData: sheets_v4.Schema$Spreadsheet,
   sheetName: string
-): Promise<number> {
-  const { data: ss } = await sheets.spreadsheets.get({ spreadsheetId });
-  const sheet = ss.sheets?.find(s => s.properties?.title === sheetName);
+): number {
+  const sheet = spreadsheetData.sheets?.find(
+    s => s.properties?.title === sheetName
+  );
 
   if (!sheet || typeof sheet.properties?.sheetId !== 'number') {
     throw new Error(`Sheet "${sheetName}" not found in spreadsheet.`);
@@ -188,21 +208,20 @@ async function getSheetId(
 }
 
 /**
- * Named Rangeの存在確認
+ * スプレッドシートデータからNamed Rangeを検索
  *
- * @param sheets - Sheets APIクライアント
- * @param spreadsheetId - スプレッドシートID
+ * @param spreadsheetData - スプレッドシートデータ
  * @param rangeName - 名前付き範囲の名前
  * @returns 既存のNamed Range ID（存在しない場合はundefined）
  * @remarks 既存のNamed Rangeを更新する際に使用
  */
-async function findExistingNamedRange(
-  sheets: sheets_v4.Sheets,
-  spreadsheetId: string,
+function findExistingNamedRangeFromData(
+  spreadsheetData: sheets_v4.Schema$Spreadsheet,
   rangeName: string
-): Promise<string | undefined> {
-  const { data: ss } = await sheets.spreadsheets.get({ spreadsheetId });
-  const existing = ss.namedRanges?.find(nr => nr.name === rangeName);
+): string | undefined {
+  const existing = spreadsheetData.namedRanges?.find(
+    nr => nr.name === rangeName
+  );
   return existing?.namedRangeId as string | undefined;
 }
 
@@ -317,10 +336,11 @@ export async function setupNamedRange(
       throw new Error('Range must be in format "SheetName!A1:B2"');
     }
 
-    const sheetId = await getSheetId(sheets, spreadsheetId, sheetName);
-    const existingRangeId = await findExistingNamedRange(
-      sheets,
-      spreadsheetId,
+    // API呼び出しを1回だけ実行（パフォーマンス最適化）
+    const spreadsheetData = await getSpreadsheetData(sheets, spreadsheetId);
+    const sheetId = getSheetIdFromData(spreadsheetData, sheetName);
+    const existingRangeId = findExistingNamedRangeFromData(
+      spreadsheetData,
       rangeName
     );
 
