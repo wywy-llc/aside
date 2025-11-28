@@ -29,6 +29,19 @@ export interface Schedule {
 }
 
 /**
+ * Task機能のデータ型
+ */
+export interface Task {
+  id: string;
+  title: string;
+  priority: number;
+  completed: boolean;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
  * Google Sheets API batchUpdateリクエストの型
  */
 export interface SheetsApiRequest {
