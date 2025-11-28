@@ -218,12 +218,15 @@ export interface SyncSecretsFromGcpToLocalArgs {
 }
 
 /**
- * GCPからローカル開発環境へシークレット設定を同期
- *
- * @param args - プロジェクトIDと開発用/本番用スプレッドシートIDを含む設定オブジェクト
- * @returns 実行結果メッセージ
- * @remarks GCP APIの有効化、サービスアカウント作成、キー生成、.env更新を一括実行
+ *  GCPからローカル開発環境へシークレット設定を同期
+ * .envファイルに必要な環境変数が追加、更新される
+ * - gcloud CLIがインストールされていること
+ * @param args.projectId - GCPプロジェクトID（省略時はgcloudのデフォルトプロジェクトを使用）
+ * @param args.spreadsheetIdDev - 開発用スプレッドシートID(APP_SPREADSHEET_ID_1_DEV)
+ * @param args.spreadsheetIdProd - 本番用スプレッドシートID（APP_SPREADSHEET_ID_1_PROD）
+ * @returns ツール実行結果
  */
+
 export async function syncSecretsFromGcpToLocal(
   args: SyncSecretsFromGcpToLocalArgs
 ) {
