@@ -10,9 +10,9 @@ import {
 } from './operation-catalog.js';
 import {
   type FeatureSchema,
-  generateHeaderRange,
   generateDataRange,
   generateDefaults,
+  generateHeaderRange,
   generateObjectToRow,
   generateRowToObject,
   generateTypeDefinition,
@@ -23,8 +23,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // NOTE: __dirname points to src/tools (dev) or build/tools (prod)
-// Always point projectRoot to repository root (mcp-server)
-const projectRoot = path.resolve(__dirname, '..', '..');
+// Use process.cwd() to point to user's project directory where scaffold-feature is invoked
+const projectRoot = process.cwd();
 
 // 定数定義
 const TEMPLATE_FILES = {
@@ -340,7 +340,7 @@ function buildTemplateData(
  * 機能のスキャフォールディングを実行
  *
  * @param args.featureName - 機能名
- * @param args.operations - 生成する操作のリスト(例: ["create", "read", "update"]）)
+ * @param args.operations - 生成する操作のリスト(例: ["create", "read", "update"]）
  * @param args.schema - スキーマ定義(例: { fields: [...], sheetName: "Sheet1", headerRange: "A1:D1" }）
  * @returns ツール実行結果
  */
