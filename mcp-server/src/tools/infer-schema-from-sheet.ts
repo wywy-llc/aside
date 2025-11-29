@@ -13,7 +13,7 @@ export interface InferSchemaArgs {
   sheetName: string;
   headers: string[];
   lang?: string;
-  /** ヘッダー開始セル（例: "A3" または "シート名!A3"）。終了列は headers 長から算出。 */
+  /** ヘッダー開始セル(例: "A3" または "シート名!A3")。終了列は headers 長から算出。 */
   headerStartCell: string;
 }
 
@@ -42,6 +42,44 @@ interface HeaderCellReference {
 interface RangeStrings {
   headerRange: string;
   dataRange: string;
+}
+
+/** Google API clients container */
+interface GoogleClients {
+  sheets: sheets_v4.Sheets;
+  translate: translate_v2.Translate;
+}
+
+// ============================================================================
+// Debug Logger
+// ============================================================================
+
+/**
+ * Centralized debug information collector
+ * @remarks Provides type-safe, mutable debug state management
+ */
+class DebugLogger {
+  private data: Record<string, unknown> = {};
+
+  set(key: string, value: unknown): void {
+    this.data[key] = value;
+  }
+
+  delete(key: string): void {
+    delete this.data[key];
+  }
+
+  getData(): Record<string, unknown> {
+    return this.data;
+  }
+
+  isEmpty(): boolean {
+    return Object.keys(this.data).length === 0;
+  }
+
+  toJSON(): string {
+    return JSON.stringify(this.data, null, 2);
+  }
 }
 
 // ============================================================================
@@ -102,6 +140,38 @@ function toCamelCase(value: string, fallback = 'field'): string {
   );
 }
 
+/**
+ * Formats error as ToolResult with optional debug information
+ */
+function formatToolError(error: unknown, debug: DebugLogger): ToolResult {
+  const message = error instanceof Error ? error.message : String(error);
+  const debugInfo = debug.isEmpty() ? '' : `\nDebug: ${debug.toJSON()}`;
+
+  return {
+    content: [{ type: 'text', text: `Error: ${message}${debugInfo}` }],
+    isError: true,
+  };
+}
+
+// ============================================================================
+// API Client Factory
+// ============================================================================
+
+/**
+ * Creates authenticated Google API clients
+ * @remarks Extracted for dependency injection and testability
+ */
+async function createGoogleClients(): Promise<GoogleClients> {
+  const auth = new GoogleAuth({
+    scopes: [SHEETS_SCOPE, SHEETS_SCOPE_FULL, TRANSLATE_SCOPE],
+  });
+
+  return {
+    sheets: google.sheets({ version: 'v4', auth }),
+    translate: google.translate({ version: 'v2', auth }),
+  };
+}
+
 // ============================================================================
 // Extracted Business Logic Functions
 // ============================================================================
@@ -133,22 +203,22 @@ async function resolveSheetMetadata(
   sheets: sheets_v4.Sheets,
   spreadsheetId: string,
   sheetName: string,
-  debug: Record<string, unknown>
+  debug: DebugLogger
 ): Promise<SheetMetadata> {
   try {
     const metadata = await sheets.spreadsheets.get({ spreadsheetId });
-    debug.metadataFetched = 'success';
+    debug.set('metadataFetched', 'success');
 
     const sheet = metadata.data.sheets?.find(
       s => s.properties?.title === sheetName
     );
 
     if (!sheet?.properties?.title) {
-      debug.sheetNotFound = true;
+      debug.set('sheetNotFound', true);
       const availableSheets =
         metadata.data.sheets?.map(s => s.properties?.title).join(', ') ||
         'none';
-      debug.availableSheets = availableSheets;
+      debug.set('availableSheets', availableSheets);
 
       throw new Error(
         `Sheet "${sheetName}" not found in the spreadsheet. ` +
@@ -166,10 +236,10 @@ async function resolveSheetMetadata(
       sheet.properties.sheetId !== undefined
     ) {
       result.sheetId = sheet.properties.sheetId;
-      debug.sheetId = sheet.properties.sheetId;
+      debug.set('sheetId', sheet.properties.sheetId);
     }
 
-    debug.exactSheetName = result.exactSheetName;
+    debug.set('exactSheetName', result.exactSheetName);
     return result;
   } catch (err) {
     // Re-throw sheet not found errors
@@ -180,7 +250,10 @@ async function resolveSheetMetadata(
       throw err;
     }
     // Non-fatal metadata errors: log warning and use provided sheet name
-    debug.metadataWarning = err instanceof Error ? err.message : String(err);
+    debug.set(
+      'metadataWarning',
+      err instanceof Error ? err.message : String(err)
+    );
     return { exactSheetName: sheetName };
   }
 }
@@ -223,9 +296,9 @@ async function fetchHeaderRange(
   spreadsheetId: string,
   primaryRange: string,
   fallbackRange: string,
-  debug: Record<string, unknown>
+  debug: DebugLogger
 ): Promise<string[][]> {
-  debug.headerRangeInput = primaryRange;
+  debug.set('headerRangeInput', primaryRange);
 
   try {
     const res = await sheets.spreadsheets.values.get({
@@ -235,8 +308,11 @@ async function fetchHeaderRange(
     });
     return res.data.values || [];
   } catch (err) {
-    debug.headerRangeError = err instanceof Error ? err.message : String(err);
-    debug.headerRangeFallback = fallbackRange;
+    debug.set(
+      'headerRangeError',
+      err instanceof Error ? err.message : String(err)
+    );
+    debug.set('headerRangeFallback', fallbackRange);
 
     try {
       const res = await sheets.spreadsheets.values.get({
@@ -244,11 +320,13 @@ async function fetchHeaderRange(
         range: fallbackRange,
         majorDimension: 'ROWS',
       });
-      delete debug.headerRangeError; // Clear error on successful fallback
+      debug.delete('headerRangeError'); // Clear error on successful fallback
       return res.data.values || [];
     } catch (err2) {
-      debug.headerRangeErrorFallback =
-        err2 instanceof Error ? err2.message : String(err2);
+      debug.set(
+        'headerRangeErrorFallback',
+        err2 instanceof Error ? err2.message : String(err2)
+      );
       return [];
     }
   }
@@ -310,6 +388,7 @@ function generateRangeStrings(
 async function translateHeaders(
   translate: translate_v2.Translate,
   headers: string[],
+  debug: DebugLogger,
   lang?: string
 ): Promise<string[]> {
   if (!lang) return headers;
@@ -329,8 +408,12 @@ async function translateHeaders(
       .length > 0
       ? translations.map(t => t.translatedText ?? '')
       : headers;
-  } catch {
-    // Silently fall back to original headers on translation failure
+  } catch (error) {
+    // Log translation failure for observability
+    debug.set(
+      'translationWarning',
+      error instanceof Error ? error.message : String(error)
+    );
     return headers;
   }
 }
@@ -375,7 +458,7 @@ function buildFieldSchemas(
 export async function inferSchemaFromSheet(
   args: InferSchemaArgs
 ): Promise<ToolResult> {
-  let debug: Record<string, unknown> = {};
+  const debug = new DebugLogger();
 
   try {
     // 1. Validate input
@@ -384,11 +467,7 @@ export async function inferSchemaFromSheet(
     const { spreadsheetId, sheetName, headers, lang, headerStartCell } = args;
 
     // 2. Initialize Google API clients
-    const auth = new GoogleAuth({
-      scopes: [SHEETS_SCOPE, SHEETS_SCOPE_FULL, TRANSLATE_SCOPE],
-    });
-    const sheets = google.sheets({ version: 'v4', auth });
-    const translate = google.translate({ version: 'v2', auth });
+    const { sheets, translate } = await createGoogleClients();
 
     // 3. Resolve exact sheet metadata
     const { exactSheetName } = await resolveSheetMetadata(
@@ -429,16 +508,18 @@ export async function inferSchemaFromSheet(
       headers.length
     );
 
-    debug = {
-      ...debug,
-      headerRange,
-      dataRange,
-      headerRowIndex,
-      startColIndex,
-    };
+    debug.set('headerRange', headerRange);
+    debug.set('dataRange', dataRange);
+    debug.set('headerRowIndex', headerRowIndex);
+    debug.set('startColIndex', startColIndex);
 
     // 9. Translate headers (if lang specified)
-    const translatedHeaders = await translateHeaders(translate, headers, lang);
+    const translatedHeaders = await translateHeaders(
+      translate,
+      headers,
+      debug,
+      lang
+    );
 
     // 10. Build field schemas
     const fields = buildFieldSchemas(
@@ -464,15 +545,6 @@ export async function inferSchemaFromSheet(
       ],
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const debugInfo =
-      Object.keys(debug).length > 0
-        ? `\nDebug: ${JSON.stringify(debug, null, 2)}`
-        : '';
-
-    return {
-      content: [{ type: 'text', text: `Error: ${message}${debugInfo}` }],
-      isError: true,
-    };
+    return formatToolError(error, debug);
   }
 }
