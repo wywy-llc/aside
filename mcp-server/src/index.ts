@@ -16,6 +16,10 @@ import {
   type SendEmailArgs,
 } from './tools/gmail-tools.js';
 import {
+  inferSchemaFromSheet,
+  type InferSchemaArgs,
+} from './tools/infer-schema-from-sheet.js';
+import {
   scaffoldFeature,
   type ScaffoldFeatureArgs,
 } from './tools/scaffold-feature.js';
@@ -199,6 +203,50 @@ server.registerTool(
   async (args: SetupNamedRangeArgs) => {
     try {
       return (await setupNamedRange(args)) as CallToolResult;
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        isError: true,
+      } as CallToolResult;
+    }
+  }
+);
+
+server.registerTool(
+  'infer_schema_from_sheet',
+  {
+    title: 'Infer Schema From Sheet',
+    description:
+      'Fetch header row from a sheet and infer FeatureSchema (columns → FieldSchema)',
+    inputSchema: {
+      spreadsheetId: z.string().describe('Spreadsheet ID'),
+      sheetName: z.string().describe('Sheet name that contains the header row'),
+      headers: z
+        .array(z.string())
+        .min(1, 'headers must have at least one column name')
+        .describe('Array of header labels to search for'),
+      headerRange: z
+        .string()
+        .optional()
+        .describe(
+          'Deprecated: not used; header range is inferred by scanning headers'
+        ),
+      lang: z
+        .string()
+        .optional()
+        .describe(
+          'Optional language label. Stored in description as "<lang>: <headerText>"'
+        ),
+    },
+  },
+  async (args: InferSchemaArgs) => {
+    try {
+      return (await inferSchemaFromSheet(args)) as CallToolResult;
     } catch (error) {
       return {
         content: [

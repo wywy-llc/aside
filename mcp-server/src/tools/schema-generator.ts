@@ -170,7 +170,9 @@ type NormalizedHeaderRange = {
 function normalizeHeaderRange(schema: FeatureSchema): NormalizedHeaderRange {
   const { firstCol, lastCol } = getColumnBounds(schema);
   const rawHeader = schema.headerRange || `${firstCol}1:${lastCol}1`;
-  const headerWithSheet = `${schema.sheetName}!${rawHeader}`;
+  const headerWithSheet = rawHeader.includes('!')
+    ? rawHeader
+    : `${schema.sheetName}!${rawHeader}`;
 
   const match = headerWithSheet.match(
     /^(?:(?<sheet>[^!]+)!)?(?<startCol>[A-Z]+)(?<startRow>\d+):(?<endCol>[A-Z]+)(?<endRow>\d+)$/

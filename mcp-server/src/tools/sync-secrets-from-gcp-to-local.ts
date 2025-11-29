@@ -71,11 +71,12 @@ async function enableGoogleApis(
   projectId: string,
   messages: string[]
 ): Promise<void> {
-  messages.push('Enabling Google APIs (Sheets, Gmail, Drive)...');
+  messages.push('Enabling Google APIs (Sheets, Gmail, Drive, Translation)...');
   const apis = [
     'sheets.googleapis.com',
     'gmail.googleapis.com',
     'drive.googleapis.com',
+    'translate.googleapis.com',
   ];
   for (const api of apis) {
     await execa('gcloud', ['services', 'enable', api, '--project', projectId]);
