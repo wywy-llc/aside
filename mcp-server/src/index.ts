@@ -83,22 +83,19 @@ const featureSchemaZod = z.object({
     .min(1, 'At least one field is required')
     .describe('Array of field definitions for the feature'),
 
-  range: z
+  sheetName: z
     .string()
-    .regex(
-      /^(?:[A-Za-z0-9_]+!)?[A-Z]+\d*:[A-Z]+\d*$/,
-      'Must be in A1 notation format (e.g., "Tasks!A2:E" or "A3:R")'
-    )
-    .describe('Google Sheets range in A1 notation'),
+    .min(1, 'Sheet name is required')
+    .describe('Sheet name that stores the feature data'),
 
-  rangeName: z
+  headerRange: z
     .string()
     .regex(
-      /^[A-Z_][A-Z0-9_]*$/,
-      'Must be uppercase with underscores (SCREAMING_SNAKE_CASE)'
+      /^(?:[A-Za-z0-9_]+!)?[A-Z]+\d+:[A-Z]+\d+$/,
+      'Must be in A1 notation format for header row (e.g., "Tasks!A3:R3")'
     )
     .optional()
-    .describe('Constant name for the range (e.g., "TODO_RANGE")'),
+    .describe('Header row range; data starts from the next row if provided'),
 });
 
 // ツール登録
@@ -147,7 +144,8 @@ server.registerTool(
   'scaffold_feature',
   {
     title: 'Scaffold Feature',
-    description: 'Generate REST API unified repository (GAS/Local dual-mode)',
+    description:
+      'Generate REST API unified repository (GAS/Local dual-mode) and upsert shared types',
     inputSchema: {
       featureName: z
         .string()
@@ -165,7 +163,7 @@ server.registerTool(
         .optional()
         .describe(
           'Schema definition for auto-generating CRUD operations with type-safe code. ' +
-            'When provided, generates TypeScript types, row/object converters, and validation.'
+            'When provided, generates TypeScript types, row/object converters, validation, and updates core/types.ts.'
         ),
     },
   },
@@ -195,7 +193,7 @@ server.registerTool(
     inputSchema: {
       spreadsheetId: z.string(),
       rangeName: z.string().describe('Range name (e.g., "TODO_RANGE")'),
-      range: z.string().describe('A1 notation (e.g., "Todos!A2:E")'),
+      headerRange: z.string().describe('A1 header range (e.g., "Todos!A1:E1")'),
     },
   },
   async (args: SetupNamedRangeArgs) => {

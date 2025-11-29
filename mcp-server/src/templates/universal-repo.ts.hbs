@@ -1,36 +1,8 @@
 import { SheetsClient } from '@/core/client.js';
-{{#if hasSchema}}
-  {{#if rangeName}}
-import {
-  {{rangeName}}
-} from '../../core/constants.js';
-  {{/if}}
-{{/if}}
 import {
   {{featureName}}
 } from '../../core/types.js';
-
-// Cache crypto availability check
-let hasCrypto: boolean | null = null;
-
-// Utility for UUID
-function generateUuid(): string {
-  if (typeof Utilities !== 'undefined') {
-    return Utilities.getUuid();
-  }
-
-  // Cache crypto check to avoid repeated typeof checks
-  if (hasCrypto === null) {
-    hasCrypto = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function';
-  }
-
-  if (hasCrypto) {
-    return crypto.randomUUID();
-  }
-
-  // Fallback for environments without crypto
-  throw new Error('UUID generation not available in this environment');
-}
+import { generateUuid } from '../../core/utils.js';
 
 /**
  * Universal {{featureName}} repository factory for GAS/Node.js environments

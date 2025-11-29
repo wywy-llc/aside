@@ -13,16 +13,16 @@ const FEATURE_SCHEMA_PRESETS = {
       { name: 'id', type: 'string', column: 'A', required: true },
       { name: 'title', type: 'string', column: 'B', required: true },
     ] as FieldSchema[],
-    range: 'Tasks!A2:E',
-    rangeName: 'TASK_RANGE',
+    sheetName: 'Tasks',
+    headerRange: 'A1:E1',
   },
   item: {
     fields: [
       { name: 'id', type: 'string', column: 'A', required: true },
       { name: 'title', type: 'string', column: 'B', required: true },
     ] as FieldSchema[],
-    range: 'Items!A2:E',
-    rangeName: 'ITEM_RANGE',
+    sheetName: 'Items',
+    headerRange: 'A1:E1',
   },
   taskWithCompletion: {
     fields: [
@@ -30,23 +30,23 @@ const FEATURE_SCHEMA_PRESETS = {
       { name: 'title', type: 'string', column: 'B', required: true },
       { name: 'completed', type: 'boolean', column: 'C' },
     ] as FieldSchema[],
-    range: 'Tasks!A2:E',
-    rangeName: 'TASK_RANGE',
+    sheetName: 'Tasks',
+    headerRange: 'A1:E1',
   },
   user: {
     fields: [
       { name: 'name', type: 'string', column: 'A', required: true },
       { name: 'age', type: 'number', column: 'B' },
     ] as FieldSchema[],
-    range: 'Users!A2:B',
-    rangeName: 'USER_RANGE',
+    sheetName: 'Users',
+    headerRange: 'A1:B1',
   },
   event: {
     fields: [
       { name: 'createdAt', type: 'date', column: 'A', required: true },
     ] as FieldSchema[],
-    range: 'Events!A2:A',
-    rangeName: 'EVENT_RANGE',
+    sheetName: 'Events',
+    headerRange: 'A1:A1',
   },
   userWithEmail: {
     fields: [
@@ -57,8 +57,8 @@ const FEATURE_SCHEMA_PRESETS = {
         description: 'User email address',
       },
     ] as FieldSchema[],
-    range: 'Users!A2:A',
-    rangeName: 'USER_RANGE',
+    sheetName: 'Users',
+    headerRange: 'A1:A1',
   },
   userWithActive: {
     fields: [
@@ -69,16 +69,16 @@ const FEATURE_SCHEMA_PRESETS = {
         sheetsFormat: 'TRUE/FALSE',
       },
     ] as FieldSchema[],
-    range: 'Users!A2:A',
-    rangeName: 'USER_RANGE',
+    sheetName: 'Users',
+    headerRange: 'A1:A1',
   },
   product: {
     fields: [
       { name: 'count', type: 'number', column: 'A' },
       { name: 'price', type: 'number', column: 'B' },
     ] as FieldSchema[],
-    range: 'Products!A2:B',
-    rangeName: 'PRODUCT_RANGE',
+    sheetName: 'Products',
+    headerRange: 'A1:B1',
   },
   dataUnsorted: {
     fields: [
@@ -86,8 +86,8 @@ const FEATURE_SCHEMA_PRESETS = {
       { name: 'first', type: 'string', column: 'A' },
       { name: 'second', type: 'string', column: 'B' },
     ] as FieldSchema[],
-    range: 'Data!A2:C',
-    rangeName: 'DATA_RANGE',
+    sheetName: 'Data',
+    headerRange: 'A1:C1',
   },
   setting: {
     fields: [
@@ -98,31 +98,31 @@ const FEATURE_SCHEMA_PRESETS = {
         sheetsFormat: 'TRUE/FALSE',
       },
     ] as FieldSchema[],
-    range: 'Settings!A2:A',
-    rangeName: 'SETTING_RANGE',
+    sheetName: 'Settings',
+    headerRange: 'A1:A1',
   },
   itemWithQuantity: {
     fields: [
       { name: 'quantity', type: 'number', column: 'A' },
     ] as FieldSchema[],
-    range: 'Items!A2:A',
-    rangeName: 'ITEM_RANGE',
+    sheetName: 'Items',
+    headerRange: 'A1:A1',
   },
   userWithEmailRequired: {
     fields: [
       { name: 'email', type: 'string', column: 'A', required: true },
       { name: 'age', type: 'number', column: 'B' },
     ] as FieldSchema[],
-    range: 'Users!A2:B',
-    rangeName: 'USER_RANGE',
+    sheetName: 'Users',
+    headerRange: 'A1:B1',
   },
   note: {
     fields: [
       { name: 'note', type: 'string', column: 'A' },
       { name: 'tag', type: 'string', column: 'B' },
     ] as FieldSchema[],
-    range: 'Notes!A2:B',
-    rangeName: 'NOTE_RANGE',
+    sheetName: 'Notes',
+    headerRange: 'A1:B1',
   },
   itemWithAllTypes: {
     fields: [
@@ -131,18 +131,18 @@ const FEATURE_SCHEMA_PRESETS = {
       { name: 'active', type: 'boolean', column: 'C' },
       { name: 'createdAt', type: 'date', column: 'D' },
     ] as FieldSchema[],
-    range: 'Items!A2:D',
-    rangeName: 'ITEM_RANGE',
+    sheetName: 'Items',
+    headerRange: 'A1:D1',
   },
   empty: {
     fields: [] as FieldSchema[],
-    range: 'Empty!A2:A',
-    rangeName: 'EMPTY_RANGE',
+    sheetName: 'Empty',
+    headerRange: 'A1:A1',
   },
   single: {
     fields: [{ name: 'value', type: 'string', column: 'A' }] as FieldSchema[],
-    range: 'Single!A2:A',
-    rangeName: 'SINGLE_RANGE',
+    sheetName: 'Single',
+    headerRange: 'A1:A1',
   },
 } as const;
 
@@ -157,8 +157,8 @@ const featureSchemaFactory = Factory.Sync.makeFactory<FeatureSchema>({
     { name: 'id', type: 'string', column: 'A', required: true },
     { name: 'title', type: 'string', column: 'B', required: true },
   ],
-  range: Factory.each(i => `Sheet${i}!A2:E`),
-  rangeName: Factory.each(i => `RANGE_${i}`),
+  sheetName: Factory.each(i => `Sheet${i}`),
+  headerRange: 'A1:E1',
 });
 
 /**
@@ -180,7 +180,6 @@ const operationContextFactory = Factory.Sync.makeFactory<OperationContext>({
   featureName: Factory.each(i => `Feature${i}`),
   featureNameCamel: Factory.each(i => `feature${i}`),
   schema: Factory.each(() => featureSchemaFactory.build()),
-  rangeName: Factory.each(i => `RANGE_${i}`),
 });
 
 /**
@@ -373,7 +372,6 @@ export const OperationContextFactory = {
       featureName: 'Todo',
       featureNameCamel: 'todo',
       schema: FeatureSchemaFactory.task(),
-      rangeName: 'TASK_RANGE',
       ...overrides,
     }),
 
@@ -390,7 +388,6 @@ export const OperationContextFactory = {
       featureName: 'Item',
       featureNameCamel: 'item',
       schema: FeatureSchemaFactory.item(),
-      rangeName: 'ITEM_RANGE',
       ...overrides,
     }),
 
@@ -407,7 +404,6 @@ export const OperationContextFactory = {
       featureName: 'Task',
       featureNameCamel: 'task',
       schema: FeatureSchemaFactory.task(),
-      rangeName: 'TASK_RANGE',
       ...overrides,
     }),
 } as const;

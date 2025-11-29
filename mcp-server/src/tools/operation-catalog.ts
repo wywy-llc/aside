@@ -52,10 +52,30 @@ export interface OperationContext {
   featureNameCamel: string;
   /** スキーマ */
   schema?: FeatureSchema;
-  /** 範囲名 */
+  /** (任意) 範囲名 - 後方互換のため残置 */
   rangeName?: string;
   /** カスタムパラメータ */
   params?: Record<string, any>;
+}
+
+function getColumnBounds(schema?: FeatureSchema) {
+  if (!schema) return { firstCol: 'A', lastCol: 'A' };
+  const cols = schema.fields.map(f => f.column).sort();
+  return { firstCol: cols[0], lastCol: cols[cols.length - 1] };
+}
+
+function getDataRange(ctx: OperationContext): string {
+  const schema = ctx.schema;
+  const sheet = schema?.sheetName ?? 'Sheet1';
+  const { firstCol, lastCol } = getColumnBounds(schema);
+  const header = schema?.headerRange;
+  let headerRow = 1;
+  if (header) {
+    const match = header.match(/(?<row>\d+)/);
+    if (match?.groups?.row) headerRow = Number(match.groups.row);
+  }
+  const dataStart = headerRow + 1;
+  return `${sheet}!${firstCol}${dataStart}:${lastCol}`;
 }
 
 /**
@@ -72,7 +92,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
     returnType: '{{featureName}}[]',
     generate: ctx => `
     const getAll = async (): Promise<${ctx.featureName}[]> => {
-      const response = await SheetsClient.batchGet(spreadsheetId, [${ctx.rangeName || `'${ctx.schema?.range}'`}]);
+      const response = await SheetsClient.batchGet(spreadsheetId, ['${getDataRange(ctx)}']);
       const rows = response.valueRanges?.[0]?.values || [];
 
       return rows
@@ -127,7 +147,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       } as ${ctx.featureName};
 
       const rowValues = ${ctx.featureNameCamel}ToRow(item);
-      await SheetsClient.appendValues(spreadsheetId, ${ctx.rangeName || `'${ctx.schema?.range}'`}, [rowValues]);
+      await SheetsClient.appendValues(spreadsheetId, '${getDataRange(ctx)}', [rowValues]);
       return item;
     };`;
     },
@@ -165,7 +185,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       };
 
       const values = ${ctx.featureNameCamel}ToRow(updated);
-      const sheetName = ${ctx.rangeName ? `${ctx.rangeName}.split('!')[0]` : `'${ctx.schema?.range}'.split('!')[0]`};
+      const sheetName = '${ctx.schema?.sheetName ?? 'Sheet1'}';
       const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
       await SheetsClient.updateValues(spreadsheetId, range, [values]);
     };`;
@@ -190,7 +210,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       if (index === -1) throw new Error(\`${ctx.featureName} \${${keyField}} not found\`);
 
       const rowNumber = index + 2;
-      const sheetName = ${ctx.rangeName ? `${ctx.rangeName}.split('!')[0]` : `'${ctx.schema?.range}'.split('!')[0]`};
+      const sheetName = '${ctx.schema?.sheetName ?? 'Sheet1'}';
       const range = \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`;
 
       const emptyValues = new Array(${ctx.schema?.fields.length || 10}).fill('');
@@ -366,7 +386,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
       } as ${ctx.featureName}));
 
       const rows = created.map(item => ${ctx.featureNameCamel}ToRow(item));
-      await SheetsClient.appendValues(spreadsheetId, ${ctx.rangeName || `'${ctx.schema?.range}'`}, rows);
+      await SheetsClient.appendValues(spreadsheetId, '${getDataRange(ctx)}', rows);
       return created;
     };`;
     },
@@ -402,7 +422,7 @@ export const OPERATION_CATALOG: Record<string, OperationDefinition> = {
 
           const updated = { ...item, ...updateData, updatedAt: new Date().toISOString() };
           const rowNumber = index + 2;
-          const sheetName = ${ctx.rangeName ? `${ctx.rangeName}.split('!')[0]` : `'${ctx.schema?.range}'.split('!')[0]`};
+          const sheetName = '${ctx.schema?.sheetName ?? 'Sheet1'}';
 
           return {
             range: \`\${sheetName}!A\${rowNumber}:Z\${rowNumber}\`,

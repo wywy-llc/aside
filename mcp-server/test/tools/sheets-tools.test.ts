@@ -62,7 +62,7 @@ describe('sheets-tools', () => {
     });
 
     it('新規Named Range設定時、正常に作成される', async () => {
-      // テストデータ: TODO_RANGE（E列全体）の設定引数
+      // テストデータ: TODO_RANGE（ヘッダー行 A1:E1）の設定引数
       const args = SetupNamedRangeArgsFactory.todoRange();
 
       // 実行
@@ -88,9 +88,9 @@ describe('sheets-tools', () => {
                   range: {
                     sheetId: 0,
                     startRowIndex: 0,
-                    endRowIndex: undefined,
-                    startColumnIndex: 4, // E列 = 4
-                    endColumnIndex: 5,
+                    endRowIndex: 1, // ヘッダー行のみ
+                    startColumnIndex: 0, // A = 0
+                    endColumnIndex: 5, // E の次
                   },
                 },
               },
@@ -220,15 +220,15 @@ describe('sheets-tools', () => {
       expect(result.isError).toBeUndefined();
     });
 
-    it('列全体指定（A:C）で、endRowIndexがundefinedとなる', async () => {
-      // テストデータ: 列全体の範囲指定（Todos!A:C）
-      const args = SetupNamedRangeArgsFactory.columnRange();
+    it('ヘッダー行範囲（A1:C1）で、endRowIndexが1となる', async () => {
+      // テストデータ: ヘッダー行の範囲指定（Todos!A1:C1）
+      const args = SetupNamedRangeArgsFactory.headerRange();
 
       // 実行
       const result = await setupNamedRange(args);
 
-      // 検証: 列全体を表すGridRangeが生成される
-      // (1) batchUpdate に endRowIndex=undefined が含まれる（行全体を意味）
+      // 検証: ヘッダー行を表すGridRangeが生成される
+      // (1) batchUpdate に endRowIndex=1 が含まれる（1行分）
       expect(mockBatchUpdate).toHaveBeenCalledWith({
         spreadsheetId: args.spreadsheetId,
         requestBody: {
@@ -240,9 +240,9 @@ describe('sheets-tools', () => {
                   range: {
                     sheetId: 0,
                     startRowIndex: 0,
-                    endRowIndex: undefined, // 行全体
-                    startColumnIndex: 0, // A = 0
-                    endColumnIndex: 3, // C = 2 (exclusive end = 3)
+                    endRowIndex: 1,
+                    startColumnIndex: 0,
+                    endColumnIndex: 3,
                   },
                 },
               },

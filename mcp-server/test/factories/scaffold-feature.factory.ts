@@ -17,8 +17,8 @@ const SCAFFOLD_ARGS_PRESETS = {
         { name: 'id', type: 'string' as const, column: 'A', required: true },
         { name: 'title', type: 'string' as const, column: 'B', required: true },
       ],
-      range: 'Tasks!A2:E',
-      rangeName: 'TASK_RANGE',
+      sheetName: 'Tasks',
+      headerRange: 'A1:B1',
     },
   },
   /** 複数列のMedicalSheet（batchUpdate, getAll） */
@@ -34,7 +34,8 @@ const SCAFFOLD_ARGS_PRESETS = {
         { name: 'reviewer', type: 'string' as const, column: 'E' },
         { name: 'status', type: 'string' as const, column: 'F' },
       ],
-      range: 'A3:R',
+      sheetName: 'メールボックス',
+      headerRange: 'A3:R3',
     },
   },
   /** シート名なしの範囲フォーマット */
@@ -43,7 +44,8 @@ const SCAFFOLD_ARGS_PRESETS = {
     operations: ['getAll'] as string[],
     schema: {
       fields: [{ name: 'value', type: 'string' as const, column: 'A' }],
-      range: 'A2:C',
+      sheetName: 'Data',
+      headerRange: 'A1:C1',
     },
   },
   /** 全操作を生成 */
@@ -55,8 +57,8 @@ const SCAFFOLD_ARGS_PRESETS = {
         { name: 'id', type: 'string' as const, column: 'A', required: true },
         { name: 'name', type: 'string' as const, column: 'B', required: true },
       ],
-      range: 'Items!A2:B',
-      rangeName: 'ITEM_RANGE',
+      sheetName: 'Items',
+      headerRange: 'A1:B1',
     },
   },
   /** スキーマなし（操作のみ） */
@@ -70,7 +72,8 @@ const SCAFFOLD_ARGS_PRESETS = {
     operations: ['getAll'] as string[],
     schema: {
       fields: [{ name: 'id', type: 'string' as const, column: 'A' }],
-      range: 'A2:A',
+      sheetName: 'Simple',
+      headerRange: 'A1:A1',
     },
   },
 } as const;

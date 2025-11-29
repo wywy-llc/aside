@@ -7,7 +7,7 @@ import type { sheets_v4 } from 'googleapis';
 export interface SetupNamedRangeArgs {
   spreadsheetId: string;
   rangeName: string;
-  range: string;
+  headerRange: string;
 }
 
 /**
@@ -36,26 +36,26 @@ export interface NamedRange {
 const SETUP_NAMED_RANGE_PRESETS = {
   todoRange: {
     rangeName: 'TODO_RANGE',
-    range: 'Todos!E:E',
+    headerRange: 'Todos!A1:E1',
   },
   withQuotedSheetName: {
     rangeName: 'TEST_RANGE',
-    range: "'Sheet Name'!A1:B2",
+    headerRange: "'Sheet Name'!A1:B2",
   },
   withEscapedChars: {
     rangeName: 'TEST_RANGE',
-    range: 'Todos\\!A1:B2',
+    headerRange: 'Todos\\!A1:B2',
   },
-  columnRange: {
+  headerRange: {
     rangeName: 'COLUMN_RANGE',
-    range: 'Todos!A:C',
+    headerRange: 'Todos!A1:C1',
   },
   rowRange: {
     rangeName: 'ROW_RANGE',
-    range: 'Todos!1:5',
+    headerRange: 'Todos!1:5',
   },
   invalidRange: {
-    range: 'InvalidFormat',
+    headerRange: 'InvalidFormat',
   },
   emptySpreadsheetId: {
     spreadsheetId: '',
@@ -74,7 +74,7 @@ const setupNamedRangeArgsFactory =
   Factory.Sync.makeFactory<SetupNamedRangeArgs>({
     spreadsheetId: '1jvwUjvP8t9o8u6O42a-hvTe1HBXM7iXRqbsMhp0JH2g',
     rangeName: Factory.each(i => `TEST_RANGE_${i}`),
-    range: 'Todos!E:E',
+    headerRange: 'Todos!A1:E1',
   });
 
 /**
@@ -181,10 +181,10 @@ export const SetupNamedRangeArgsFactory = {
   withEscapedChars: createPreset(SETUP_NAMED_RANGE_PRESETS.withEscapedChars),
 
   /**
-   * 列全体の範囲プリセット
-   * @example const args = SetupNamedRangeArgsFactory.columnRange();
+   * ヘッダー行範囲プリセット
+   * @example const args = SetupNamedRangeArgsFactory.headerRange();
    */
-  columnRange: createPreset(SETUP_NAMED_RANGE_PRESETS.columnRange),
+  headerRange: createPreset(SETUP_NAMED_RANGE_PRESETS.headerRange),
 
   /**
    * 行全体の範囲プリセット

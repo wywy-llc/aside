@@ -229,13 +229,13 @@ function findExistingNamedRangeFromData(
  * constants.tsファイルを更新
  *
  * @param rangeName - 名前付き範囲の名前
- * @param range - A1記法の範囲
+ * @param headerRange - A1記法のヘッダー範囲
  * @param messages - 実行ログを格納する配列
  * @remarks constants.tsが存在しない場合は警告のみ表示
  */
 async function updateConstantsFile(
   rangeName: string,
-  range: string,
+  headerRange: string,
   messages: string[]
 ): Promise<void> {
   const constantsPath = path.join(
@@ -258,7 +258,7 @@ async function updateConstantsFile(
   }
 
   let content = await fs.readFile(constantsPath, 'utf8');
-  const exportLine = `export const ${rangeName} = '${range}';`;
+  const exportLine = `export const ${rangeName} = '${headerRange}';`;
   const regex = new RegExp(`export const ${rangeName} = .*;`);
 
   if (regex.test(content)) {
@@ -280,8 +280,8 @@ export interface SetupNamedRangeArgs {
   spreadsheetId: string;
   /** 名前付き範囲の名前（例: "TODO_RANGE"） */
   rangeName: string;
-  /** A1記法の範囲（例: "Sheet1!A1:B10"） */
-  range: string;
+  /** A1記法のヘッダー行範囲（例: "Sheet1!A1:E1"） */
+  headerRange: string;
 }
 
 /**
@@ -297,33 +297,37 @@ export async function setupNamedRange(
   const messages: string[] = [];
 
   try {
-    const { spreadsheetId, rangeName, range: rawRange } = args;
+    const { spreadsheetId, rangeName, headerRange: rawRange } = args;
 
     if (!spreadsheetId || !rangeName || !rawRange) {
-      throw new Error('spreadsheetId, rangeName, and range are required');
+      throw new Error('spreadsheetId, rangeName, and headerRange are required');
     }
 
     // 範囲指定を正規化
-    let range = rawRange;
+    let headerRange = rawRange;
 
     // シェルエスケープされた文字を正規化
-    range = range.replace(/\\!/g, '!'); // \! → !
+    headerRange = headerRange.replace(/\\!/g, '!'); // \! → !
 
     // 範囲全体がシングルクォートで囲まれている場合（'Todos!E:E'のような誤った形式）
     // ただし、Google Sheets形式のシート名エスケープ（'Sheet Name'!A1）は除外
-    if (range.startsWith("'") && range.endsWith("'") && !range.includes("'!")) {
+    if (
+      headerRange.startsWith("'") &&
+      headerRange.endsWith("'") &&
+      !headerRange.includes("'!")
+    ) {
       // 範囲全体を囲むクォートを削除
-      range = range.slice(1, -1);
+      headerRange = headerRange.slice(1, -1);
     }
 
     messages.push(
-      `Setting up Named Range: ${chalk.bold(rangeName)} -> ${range}`
+      `Setting up Named Range: ${chalk.bold(rangeName)} -> ${headerRange}`
     );
 
     const sheets = await getSheetsClient();
 
     // A1記法をパース（例: "Sheet1!A1:B2" or "'Sheet Name'!A1:B2" -> sheetName + cellRange）
-    const rangeParts = range.split('!');
+    const rangeParts = headerRange.split('!');
     let sheetName = rangeParts[0];
     const cellRange = rangeParts.slice(1).join('!');
 
@@ -370,7 +374,7 @@ export async function setupNamedRange(
       requestBody: { requests },
     });
 
-    await updateConstantsFile(rangeName, range, messages);
+    await updateConstantsFile(rangeName, headerRange, messages);
 
     messages.push(chalk.green('✅ Named Range setup complete!'));
 

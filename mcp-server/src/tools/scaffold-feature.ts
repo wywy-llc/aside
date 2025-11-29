@@ -10,7 +10,8 @@ import {
 } from './operation-catalog.js';
 import {
   type FeatureSchema,
-  generateColumnRange,
+  generateHeaderRange,
+  generateDataRange,
   generateDefaults,
   generateObjectToRow,
   generateRowToObject,
@@ -21,7 +22,9 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
+// NOTE: __dirname points to src/tools (dev) or build/tools (prod)
+// Always point projectRoot to repository root (mcp-server)
+const projectRoot = path.resolve(__dirname, '..', '..');
 
 // 定数定義
 const TEMPLATE_FILES = {
@@ -56,7 +59,8 @@ const TEMPLATE_DIRS = {
  *       { name: "id", type: "string", column: "A" },
  *       { name: "name", type: "string", column: "B" }
  *     ],
- *     range: "Items!A2:B"
+ *     sheetName: "Items",
+ *     headerRange: "A1:B1"
  *   }
  * };
  * ```
@@ -97,12 +101,12 @@ interface TemplateData {
   typeDefinition?: string;
   rowToObject?: string;
   objectToRow?: string;
-  columnRange?: string;
+  headerRange?: string;
+  dataRange?: string;
+  sheetName?: string;
   fieldCount?: number;
   validation?: string;
   defaults?: Record<string, any>;
-  range?: string;
-  rangeName?: string;
   operationCodes: string;
   exportsList: string;
 }
@@ -227,34 +231,6 @@ async function upsertCoreTypes(
   messages.push(`Updated core types: ${pascalName}`);
 }
 
-async function upsertCoreConstants(
-  rangeName: string | undefined,
-  range: string | undefined,
-  messages: string[]
-): Promise<void> {
-  if (!rangeName || !range) return;
-
-  const constantsPath = path.join(projectRoot, 'src/core/constants.ts');
-  let content = '';
-  try {
-    content = await fs.readFile(constantsPath, 'utf-8');
-  } catch {
-    content = '/** Auto-generated range constants */\n';
-  }
-
-  const declaration = `export const ${rangeName} = '${range}';`;
-  const pattern = new RegExp(`export const ${rangeName} = ['\`"].*['\`"];`);
-  if (pattern.test(content)) {
-    content = content.replace(pattern, declaration);
-  } else {
-    if (!content.endsWith('\n')) content += '\n';
-    content += `${declaration}\n`;
-  }
-
-  await fs.writeFile(constantsPath, content);
-  messages.push(`Updated core constants: ${rangeName}`);
-}
-
 /**
  * 操作リストを解決
  *
@@ -302,13 +278,10 @@ function buildSchemaData(
     };
   }
 
-  const rangeName = schema.rangeName || `${names.pascal.toUpperCase()}_RANGE`;
-
   const operationContext = {
     featureName: names.pascal,
     featureNameCamel: names.camel,
     schema,
-    rangeName,
   };
 
   const operationCodes = generateOperationsCodes(
@@ -322,12 +295,12 @@ function buildSchemaData(
     typeDefinition: generateTypeDefinition(names.pascal, schema),
     rowToObject: generateRowToObject(names.pascal, schema),
     objectToRow: generateObjectToRow(names.camel, schema),
-    columnRange: generateColumnRange(schema),
+    headerRange: generateHeaderRange(schema),
+    dataRange: generateDataRange(schema),
+    sheetName: schema.sheetName,
     fieldCount: getFieldCount(schema),
     validation: generateValidation(names.camel, schema),
     defaults: generateDefaults(schema),
-    range: schema.range,
-    rangeName,
     operationCodes: operationCodes.join('\n'),
     exportsList,
   };
@@ -346,6 +319,10 @@ function buildTemplateData(
   operationIds: string[],
   schemaData: Partial<TemplateData>
 ): TemplateData {
+  const fallbackType =
+    schemaData.typeDefinition ||
+    `export interface ${names.pascal} {\n  id?: string;\n  title?: string;\n  [key: string]: any;\n}`;
+
   return {
     featureName: names.pascal,
     featureNameCamel: names.camel,
@@ -354,6 +331,7 @@ function buildTemplateData(
     hasSchema: false,
     operationCodes: '',
     exportsList: '',
+    typeDefinition: fallbackType,
     ...schemaData,
   };
 }
@@ -363,7 +341,7 @@ function buildTemplateData(
  *
  * @param args.featureName - 機能名
  * @param args.operations - 生成する操作のリスト(例: ["create", "read", "update"]）)
- * @param args.schema - スキーマ定義(例: { fields: [...], range: "A1:D", rangeName: "TODO_RANGE" }）
+ * @param args.schema - スキーマ定義(例: { fields: [...], sheetName: "Sheet1", headerRange: "A1:D1" }）
  * @returns ツール実行結果
  */
 export async function scaffoldFeature(
@@ -399,11 +377,6 @@ export async function scaffoldFeature(
 
     // コア定義を更新
     await upsertCoreTypes(names.pascal, templateData.typeDefinition, messages);
-    await upsertCoreConstants(
-      templateData.rangeName,
-      templateData.range,
-      messages
-    );
 
     // ファイル生成
     await writeGeneratedFiles(

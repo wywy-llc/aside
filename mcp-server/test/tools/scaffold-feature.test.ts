@@ -99,6 +99,8 @@ describe('scaffoldFeature', () => {
       expect(filePaths.some(p => p.includes('MedicalSheetUseCase.ts'))).toBe(
         true
       );
+      // コア型が更新されること
+      expect(filePaths.some(p => p.includes('src/core/types.ts'))).toBe(true);
     });
 
     it('rangeWithoutSheetでシート名なし範囲（A2:C）をサポート', async () => {

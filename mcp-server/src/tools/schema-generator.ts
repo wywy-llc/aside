@@ -28,10 +28,10 @@ export interface FieldSchema {
 export interface FeatureSchema {
   /** フィールド定義 */
   fields: FieldSchema[];
-  /** Sheetsの範囲（例: "Todos!A2:E"） */
-  range: string;
-  /** 範囲名の定数名（例: "TODO_RANGE"） */
-  rangeName?: string;
+  /** データを保持するシート名 */
+  sheetName: string;
+  /** ヘッダー行の範囲（例: "A1:E1"）。未指定時は列とシート名から自動算出 */
+  headerRange?: string;
 }
 
 /**
@@ -148,11 +148,30 @@ ${mappings.join('\n')}
  * @param schema - 機能スキーマ
  * @returns 列範囲（例: "A:E"）
  */
-export function generateColumnRange(schema: FeatureSchema): string {
+function getColumnBounds(schema: FeatureSchema): {
+  firstCol: string;
+  lastCol: string;
+} {
   const columns = schema.fields.map(f => f.column).sort();
   const firstCol = columns[0];
   const lastCol = columns[columns.length - 1];
-  return `${firstCol}:${lastCol}`;
+  return { firstCol, lastCol };
+}
+
+export function generateHeaderRange(schema: FeatureSchema): string {
+  if (schema.headerRange) return schema.headerRange;
+  const { firstCol, lastCol } = getColumnBounds(schema);
+  return `${schema.sheetName}!${firstCol}1:${lastCol}1`;
+}
+
+export function generateDataRange(schema: FeatureSchema): string {
+  const { firstCol, lastCol } = getColumnBounds(schema);
+  const header =
+    schema.headerRange || `${schema.sheetName}!${firstCol}1:${lastCol}1`;
+  const match = header.match(/(?<row>\d+)/);
+  const headerRow = match?.groups?.row ? Number(match.groups.row) : 1;
+  const dataStart = headerRow + 1;
+  return `${schema.sheetName}!${firstCol}${dataStart}:${lastCol}`;
 }
 
 /**

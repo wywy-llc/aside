@@ -129,7 +129,7 @@ describe('Operation Catalog', () => {
 
       // 生成コードに必要な要素が含まれること
       expect(code).toContain('const getAll');
-      expect(code).toContain('TASK_RANGE');
+      expect(code).toContain('Tasks!A2:B');
       expect(code).toContain('SheetsClient.batchGet');
       expect(code).toContain('async');
     });
@@ -339,10 +339,9 @@ describe('Operation Catalog', () => {
             { name: 'id', type: 'string', column: 'A', required: true },
             { name: 'title', type: 'string', column: 'B', required: true },
           ],
-          range: 'TestSheet!A2:E',
-          rangeName: 'TEST_RANGE',
+          sheetName: 'TestSheet',
+          headerRange: 'A1:B1',
         }),
-        rangeName: 'TEST_RANGE',
       });
 
       // 4. 選択操作のコード生成
