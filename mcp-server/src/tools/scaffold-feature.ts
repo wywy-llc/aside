@@ -67,8 +67,8 @@ const TEMPLATE_DIRS = {
  */
 export interface ScaffoldFeatureArgs {
   featureName: string;
-  operations?: string[];
-  schema?: FeatureSchema;
+  operations: string[];
+  schema: FeatureSchema;
 }
 
 /**
@@ -354,6 +354,12 @@ export async function scaffoldFeature(
     const { featureName, operations, schema } = args;
     if (!featureName) {
       throw new Error('featureName is required');
+    }
+    if (!operations || operations.length === 0) {
+      throw new Error('operations is required');
+    }
+    if (!schema || !schema.fields || schema.fields.length === 0) {
+      throw new Error('schema with at least one field is required');
     }
 
     // 名前変換

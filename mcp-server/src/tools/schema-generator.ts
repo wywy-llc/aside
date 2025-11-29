@@ -30,8 +30,8 @@ export interface FeatureSchema {
   fields: FieldSchema[];
   /** データを保持するシート名 */
   sheetName: string;
-  /** ヘッダー行の範囲（例: "A1:E1"）。未指定時は列とシート名から自動算出 */
-  headerRange?: string;
+  /** ヘッダー行の範囲（例: "A1:E1"） ※シート名は含めない */
+  headerRange: string;
 }
 
 /**
@@ -158,20 +158,42 @@ function getColumnBounds(schema: FeatureSchema): {
   return { firstCol, lastCol };
 }
 
-export function generateHeaderRange(schema: FeatureSchema): string {
-  if (schema.headerRange) return schema.headerRange;
+function normalizeHeaderRange(schema: FeatureSchema): {
+  sheet: string;
+  startCol: string;
+  endCol: string;
+  headerRow: number;
+  headerRange: string;
+} {
   const { firstCol, lastCol } = getColumnBounds(schema);
-  return `${schema.sheetName}!${firstCol}1:${lastCol}1`;
+  const rawHeader = schema.headerRange || `${firstCol}1:${lastCol}1`;
+  const headerWithSheet = `${schema.sheetName}!${rawHeader}`;
+
+  const match = headerWithSheet.match(
+    /^(?:(?<sheet>[^!]+)!)?(?<startCol>[A-Z]+)(?<startRow>\d+):(?<endCol>[A-Z]+)(?<endRow>\d+)$/
+  );
+
+  const sheet = match?.groups?.sheet || schema.sheetName;
+  const startCol = match?.groups?.startCol || firstCol;
+  const endCol = match?.groups?.endCol || lastCol;
+  const headerRow = match?.groups?.startRow ? Number(match.groups.startRow) : 1;
+
+  return {
+    sheet,
+    startCol,
+    endCol,
+    headerRow,
+    headerRange: `${sheet}!${startCol}${headerRow}:${endCol}${headerRow}`,
+    dataRange: `${sheet}!${startCol}${headerRow + 1}:${endCol}`,
+  };
+}
+
+export function generateHeaderRange(schema: FeatureSchema): string {
+  return normalizeHeaderRange(schema).headerRange;
 }
 
 export function generateDataRange(schema: FeatureSchema): string {
-  const { firstCol, lastCol } = getColumnBounds(schema);
-  const header =
-    schema.headerRange || `${schema.sheetName}!${firstCol}1:${lastCol}1`;
-  const match = header.match(/(?<row>\d+)/);
-  const headerRow = match?.groups?.row ? Number(match.groups.row) : 1;
-  const dataStart = headerRow + 1;
-  return `${schema.sheetName}!${firstCol}${dataStart}:${lastCol}`;
+  return normalizeHeaderRange(schema).dataRange;
 }
 
 /**

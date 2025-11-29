@@ -65,6 +65,11 @@ const SCAFFOLD_ARGS_PRESETS = {
   noSchema: {
     featureName: 'Custom',
     operations: ['getAll'] as string[],
+    schema: {
+      fields: [{ name: 'id', type: 'string' as const, column: 'A', required: true }],
+      sheetName: 'Custom',
+      headerRange: 'A1:A1',
+    },
   },
   /** 最小限の設定 */
   minimal: {

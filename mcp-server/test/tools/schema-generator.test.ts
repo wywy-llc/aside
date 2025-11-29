@@ -1,5 +1,7 @@
 import {
   generateDefaults,
+  generateHeaderRange,
+  generateDataRange,
   generateObjectToRow,
   generateRowToObject,
   generateTypeDefinition,
@@ -225,6 +227,57 @@ describe('Schema Generator', () => {
       const result = generateTypeDefinition('Single', schema);
 
       expect(result).toContain('value?: string;');
+    });
+  });
+
+  describe('generateHeaderRange & generateDataRange', () => {
+    it('シート名と列からヘッダー/データ範囲を自動算出（headerRange未指定）', () => {
+      // テストデータ: Tasksシート、列A:E（ファクトリー既定）
+      const schema = FeatureSchemaFactory.task();
+
+      // 実行: ヘッダー/データ範囲生成
+      const header = generateHeaderRange(schema);
+      const data = generateDataRange(schema);
+
+      // 検証: ヘッダーは1行目、データは2行目以降
+      expect(header).toBe('Tasks!A1:E1');
+      expect(data).toBe('Tasks!A2:E');
+    });
+
+    it('headerRange指定時はそれを優先し、次行をデータ開始にする', () => {
+      // テストデータ: headerRangeが3行目（データは4行目開始）
+      const schema = FeatureSchemaFactory.build({
+        sheetName: 'メールボックス',
+        headerRange: 'A3:R3',
+        fields: [
+          { name: 'a', type: 'string', column: 'A' },
+          { name: 'b', type: 'string', column: 'R' },
+        ],
+      });
+
+      const header = generateHeaderRange(schema);
+      const data = generateDataRange(schema);
+
+      expect(header).toBe('メールボックス!A3:R3');
+      expect(data).toBe('メールボックス!A4:R');
+    });
+
+    it('headerRangeにシート名が含まれていても保持する', () => {
+      // テストデータ: headerRangeに別シート名を含むケース
+      const schema = FeatureSchemaFactory.build({
+        sheetName: 'Todos',
+        headerRange: 'CustomSheet!C10:D10',
+        fields: [
+          { name: 'c', type: 'string', column: 'C' },
+          { name: 'd', type: 'string', column: 'D' },
+        ],
+      });
+
+      const header = generateHeaderRange(schema);
+      const data = generateDataRange(schema);
+
+      expect(header).toBe('CustomSheet!C10:D10');
+      expect(data).toBe('CustomSheet!C11:D');
     });
   });
 });

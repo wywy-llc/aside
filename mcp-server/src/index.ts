@@ -91,11 +91,12 @@ const featureSchemaZod = z.object({
   headerRange: z
     .string()
     .regex(
-      /^(?:[A-Za-z0-9_]+!)?[A-Z]+\d+:[A-Z]+\d+$/,
-      'Must be in A1 notation format for header row (e.g., "Tasks!A3:R3")'
+      /^[A-Z]+\d+:[A-Z]+\d+$/,
+      'Must be in A1 notation format for header row without sheet name (e.g., "A3:R3")'
     )
-    .optional()
-    .describe('Header row range; data starts from the next row if provided'),
+    .describe(
+      'Header row range without sheet name; data starts from the next row'
+    ),
 });
 
 // ツール登録
@@ -153,18 +154,16 @@ server.registerTool(
 
       operations: z
         .array(z.string())
-        .optional()
+        .min(1, 'operations is required')
         .describe(
-          'Operation IDs to generate. Use ["all"] or omit to generate all 16 operations. ' +
+          'Operation IDs to generate. Use ["all"] to generate all 16 operations. ' +
             'Available: getAll, getById, create, update, delete, search, count, etc.'
         ),
 
-      schema: featureSchemaZod
-        .optional()
-        .describe(
-          'Schema definition for auto-generating CRUD operations with type-safe code. ' +
-            'When provided, generates TypeScript types, row/object converters, validation, and updates core/types.ts.'
-        ),
+      schema: featureSchemaZod.describe(
+        'Schema definition for auto-generating CRUD operations with type-safe code. ' +
+          'Generates TypeScript types, row/object converters, validation, and updates core/types.ts.'
+      ),
     },
   },
   async (args: ScaffoldFeatureArgs) => {

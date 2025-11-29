@@ -134,8 +134,8 @@ describe('scaffoldFeature', () => {
   });
 
   describe('正常系 - スキーマなし', () => {
-    it('スキーマなしでTODOコメント付きファイル生成', async () => {
-      // テストデータ: スキーマなし（操作のみ）
+    it('最小スキーマでファイル生成成功', async () => {
+      // テストデータ: 最小スキーマ（idのみ）
       const args = ScaffoldFeatureArgsFactory.noSchema();
 
       // 実行
@@ -201,6 +201,28 @@ describe('scaffoldFeature', () => {
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('Error: Disk full');
     });
+
+    it('operations未指定でエラー', async () => {
+      const args = ScaffoldFeatureArgsFactory.basicTask({ operations: [] as string[] });
+
+      const result = await scaffoldFeature(args as any);
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('operations is required');
+    });
+
+    it('schema未指定でエラー', async () => {
+      const args = ScaffoldFeatureArgsFactory.basicTask();
+      // @ts-expect-error force invalid
+      const invalidArgs = { ...args, schema: undefined };
+
+      const result = await scaffoldFeature(invalidArgs as any);
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain(
+        'schema with at least one field is required'
+      );
+    });
   });
 
   describe('エッジケース', () => {
@@ -218,40 +240,6 @@ describe('scaffoldFeature', () => {
       );
     });
 
-    it('operations未指定で全操作が生成される', async () => {
-      // テストデータ: operations未指定
-      const args = ScaffoldFeatureArgsFactory.build({
-        featureName: 'Test',
-        operations: undefined,
-        schema: ScaffoldFeatureArgsFactory.basicTask().schema,
-      });
-
-      // 実行
-      const result = await scaffoldFeature(args);
-
-      // 検証: 全操作が生成されること
-      expect(result.isError).toBeUndefined();
-      expect(result.content[0].text).toContain(
-        'Using all available operations'
-      );
-    });
-
-    it('operations空配列で全操作が生成される', async () => {
-      // テストデータ: operations空配列
-      const args = ScaffoldFeatureArgsFactory.build({
-        featureName: 'Test',
-        operations: [],
-        schema: ScaffoldFeatureArgsFactory.basicTask().schema,
-      });
-
-      // 実行
-      const result = await scaffoldFeature(args);
-
-      // 検証: 全操作が生成されること
-      expect(result.isError).toBeUndefined();
-      expect(result.content[0].text).toContain(
-        'Using all available operations'
-      );
-    });
+    // operations は必須のため、未指定/空配列の成功ケースは存在しない
   });
 });
