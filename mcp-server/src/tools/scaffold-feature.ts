@@ -4,20 +4,20 @@ import Handlebars from 'handlebars';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
-  type FeatureSchema,
-  generateTypeDefinition,
-  generateRowToObject,
-  generateObjectToRow,
-  generateColumnRange,
-  getFieldCount,
-  generateValidation,
-  generateDefaults,
-} from './schema-generator.js';
-import {
-  generateOperationsCodes,
   generateExportsList,
+  generateOperationsCodes,
   getAllOperationIds,
 } from './operation-catalog.js';
+import {
+  type FeatureSchema,
+  generateColumnRange,
+  generateDefaults,
+  generateObjectToRow,
+  generateRowToObject,
+  generateTypeDefinition,
+  generateValidation,
+  getFieldCount,
+} from './schema-generator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,9 +156,10 @@ async function writeGeneratedFiles(
 /**
  * 機能のスキャフォールディングを実行
  *
- * @param args - 機能名と操作のリストを含む引数
- * @returns 実行結果メッセージ
- * @remarks Handlebarsテンプレートから機能のコードを生成し、src/features/配下に出力
+ * @param args.featureName - 機能名
+ * @param args.operations - 生成する操作のリスト(例: ["create", "read", "update"]）)
+ * @param args.schema - スキーマ定義(例: { fields: [...], range: "A1:D", rangeName: "TODO_RANGE" }）)
+ * @returns ツール実行結果
  */
 export async function scaffoldFeature(
   args: ScaffoldFeatureArgs

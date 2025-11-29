@@ -45,6 +45,62 @@ const server = new McpServer({
   version: SERVER_CONFIG.VERSION,
 });
 
+// FieldSchemaのZod定義
+const fieldSchemaZod = z.object({
+  name: z
+    .string()
+    .describe('Field name in camelCase (e.g., "taskTitle", "isCompleted")'),
+
+  type: z
+    .enum(['string', 'number', 'boolean', 'date'])
+    .describe('TypeScript type of the field'),
+
+  column: z
+    .string()
+    .regex(/^[A-Z]+$/, 'Must be uppercase letters (A, B, C, ..., AA, AB, ...)')
+    .describe('Google Sheets column letter'),
+
+  required: z
+    .boolean()
+    .optional()
+    .describe('Whether this field is required (generates validation code)'),
+
+  sheetsFormat: z
+    .string()
+    .optional()
+    .describe('Sheets representation format (e.g., "TRUE/FALSE" for booleans)'),
+
+  description: z
+    .string()
+    .optional()
+    .describe('Field description for TSDoc comments'),
+});
+
+// FeatureSchemaのZod定義
+const featureSchemaZod = z.object({
+  fields: z
+    .array(fieldSchemaZod)
+    .min(1, 'At least one field is required')
+    .describe('Array of field definitions for the feature'),
+
+  range: z
+    .string()
+    .regex(
+      /^[A-Za-z0-9_]+![A-Z]+\d+:[A-Z]+$/,
+      'Must be in A1 notation format (e.g., "Tasks!A2:E")'
+    )
+    .describe('Google Sheets range in A1 notation'),
+
+  rangeName: z
+    .string()
+    .regex(
+      /^[A-Z_][A-Z0-9_]*$/,
+      'Must be uppercase with underscores (SCREAMING_SNAKE_CASE)'
+    )
+    .optional()
+    .describe('Constant name for the range (e.g., "TODO_RANGE")'),
+});
+
 // ツール登録
 server.registerTool(
   'sync_secrets_from_gcp_to_local',
@@ -95,10 +151,24 @@ server.registerTool(
     title: 'Scaffold Feature',
     description: 'Generate REST API unified repository (GAS/Local dual-mode)',
     inputSchema: {
-      featureName: z.string().describe('Feature name (e.g., "Highlight")'),
+      featureName: z
+        .string()
+        .describe('Feature name in PascalCase (e.g., "Task", "TodoItem")'),
+
       operations: z
         .array(z.string())
-        .describe('Operations (e.g., ["setBackground"])'),
+        .optional()
+        .describe(
+          'Operation IDs to generate. Use ["all"] or omit to generate all 16 operations. ' +
+            'Available: getAll, getById, create, update, delete, search, count, etc.'
+        ),
+
+      schema: featureSchemaZod
+        .optional()
+        .describe(
+          'Schema definition for auto-generating CRUD operations with type-safe code. ' +
+            'When provided, generates TypeScript types, row/object converters, and validation.'
+        ),
     },
   },
   async (args: ScaffoldFeatureArgs) => {
