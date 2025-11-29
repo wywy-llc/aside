@@ -133,10 +133,10 @@ describe('scaffoldFeature', () => {
     });
   });
 
-  describe('正常系 - スキーマなし', () => {
+  describe('正常系 - 最小スキーマ', () => {
     it('最小スキーマでファイル生成成功', async () => {
       // テストデータ: 最小スキーマ（idのみ）
-      const args = ScaffoldFeatureArgsFactory.noSchema();
+      const args = ScaffoldFeatureArgsFactory.minimalSchema();
 
       // 実行
       const result = await scaffoldFeature(args);

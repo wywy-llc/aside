@@ -12,12 +12,12 @@ const SCAFFOLD_ARGS_PRESETS = {
   /** 基本的なTask機能（getAll, create） */
   basicTask: {
     featureName: 'Task',
-    operations: ['getAll', 'create'] as string[],
+    operations: ['getAll', 'create'],
     schema: {
       fields: [
         { name: 'id', type: 'string', column: 'A', required: true },
         { name: 'title', type: 'string', column: 'B', required: true },
-      ] as FieldSchema[],
+      ] satisfies FieldSchema[],
       sheetName: 'Tasks',
       headerRange: 'A1:B1',
     },
@@ -25,7 +25,7 @@ const SCAFFOLD_ARGS_PRESETS = {
   /** 複数列のMedicalSheet（batchUpdate, getAll） */
   medicalSheet: {
     featureName: 'MedicalSheet',
-    operations: ['batchUpdate', 'getAll'] as string[],
+    operations: ['batchUpdate', 'getAll'],
     schema: {
       fields: [
         { name: 'mailId', type: 'string', column: 'A' },
@@ -34,7 +34,7 @@ const SCAFFOLD_ARGS_PRESETS = {
         { name: 'receivedDate', type: 'string', column: 'D' },
         { name: 'reviewer', type: 'string', column: 'E' },
         { name: 'status', type: 'string', column: 'F' },
-      ] as FieldSchema[],
+      ] satisfies FieldSchema[],
       sheetName: 'メールボックス',
       headerRange: 'A3:R3',
     },
@@ -42,9 +42,11 @@ const SCAFFOLD_ARGS_PRESETS = {
   /** シート名なしの範囲フォーマット */
   rangeWithoutSheet: {
     featureName: 'Data',
-    operations: ['getAll'] as string[],
+    operations: ['getAll'],
     schema: {
-      fields: [{ name: 'value', type: 'string', column: 'A' }] as FieldSchema[],
+      fields: [
+        { name: 'value', type: 'string', column: 'A' },
+      ] satisfies FieldSchema[],
       sheetName: 'Data',
       headerRange: 'A1:C1',
     },
@@ -52,24 +54,24 @@ const SCAFFOLD_ARGS_PRESETS = {
   /** 全操作を生成 */
   allOperations: {
     featureName: 'Item',
-    operations: ['all'] as string[],
+    operations: ['all'],
     schema: {
       fields: [
         { name: 'id', type: 'string', column: 'A', required: true },
         { name: 'name', type: 'string', column: 'B', required: true },
-      ] as FieldSchema[],
+      ] satisfies FieldSchema[],
       sheetName: 'Items',
       headerRange: 'A1:B1',
     },
   },
-  /** スキーマなし（操作のみ） */
-  noSchema: {
+  /** 最小限のスキーマ（1フィールドのみ） */
+  minimalSchema: {
     featureName: 'Custom',
-    operations: ['getAll'] as string[],
+    operations: ['getAll'],
     schema: {
       fields: [
-        { name: 'id', type: 'string' as const, column: 'A', required: true },
-      ],
+        { name: 'id', type: 'string', column: 'A', required: true },
+      ] satisfies FieldSchema[],
       sheetName: 'Custom',
       headerRange: 'A1:A1',
     },
@@ -77,14 +79,16 @@ const SCAFFOLD_ARGS_PRESETS = {
   /** 最小限の設定 */
   minimal: {
     featureName: 'Simple',
-    operations: ['getAll'] as string[],
+    operations: ['getAll'],
     schema: {
-      fields: [{ name: 'id', type: 'string', column: 'A' }] as FieldSchema[],
+      fields: [
+        { name: 'id', type: 'string', column: 'A' },
+      ] satisfies FieldSchema[],
       sheetName: 'Simple',
       headerRange: 'A1:A1',
     },
   },
-} as const;
+};
 
 // ===== Factory Implementations =====
 
@@ -96,7 +100,7 @@ const scaffoldFeatureArgsFactory =
   Factory.Sync.makeFactory<ScaffoldFeatureArgs>({
     featureName: Factory.each(i => `Feature${i}`),
     operations: ['getAll', 'create'],
-    schema: Factory.each(() => FeatureSchemaFactory.build()),
+    schema: FeatureSchemaFactory.build(),
   });
 
 /**
@@ -176,10 +180,10 @@ export const ScaffoldFeatureArgsFactory = {
   allOperations: createPreset(SCAFFOLD_ARGS_PRESETS.allOperations),
 
   /**
-   * スキーマなしプリセット（操作のみ）
-   * @example const args = ScaffoldFeatureArgsFactory.noSchema();
+   * 最小限のスキーマプリセット（1フィールドのみ）
+   * @example const args = ScaffoldFeatureArgsFactory.minimalSchema();
    */
-  noSchema: createPreset(SCAFFOLD_ARGS_PRESETS.noSchema),
+  minimalSchema: createPreset(SCAFFOLD_ARGS_PRESETS.minimalSchema),
 
   /**
    * 最小限の設定プリセット

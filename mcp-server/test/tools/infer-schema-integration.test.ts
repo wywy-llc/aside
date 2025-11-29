@@ -7,6 +7,10 @@ import {
   type FeatureSchema,
 } from '../../src/tools/schema-generator.js';
 import { inferSchemaFromSheet } from '../../src/tools/infer-schema-from-sheet.js';
+import {
+  SheetsValuesGetResponseFactory,
+  TranslateListResponseFactory,
+} from '../factories/googleapis.factory.js';
 
 const mockGet = vi.fn();
 const mockTranslateList = vi.fn();
@@ -42,29 +46,23 @@ vi.mock('googleapis', () => {
 describe('infer-schema-from-sheet + schema-generator integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    SheetsValuesGetResponseFactory.resetSequenceNumber();
+    TranslateListResponseFactory.resetSequenceNumber();
   });
 
   it('inferSchemaFromSheetで推論したスキーマをschema-generatorに渡して正常に型定義とコンバータを生成できる', async () => {
     // テストデータ: 日本語ヘッダー付きシートデータ（ID, 名前, 数値）
-    mockGet.mockResolvedValueOnce({
-      data: {
-        values: [
-          ['ID', '名前', '数値'],
-          ['1', 'foo', '123'],
-        ],
-      },
-    });
+    mockGet.mockResolvedValueOnce(
+      SheetsValuesGetResponseFactory.withValues([
+        ['ID', '名前', '数値'],
+        ['1', 'foo', '123'],
+      ])
+    );
 
     // モック: Google翻訳APIで日本語→英語変換（id, name, number）
-    mockTranslateList.mockResolvedValueOnce({
-      data: {
-        translations: [
-          { translatedText: 'ID' },
-          { translatedText: 'Name' },
-          { translatedText: 'Number' },
-        ],
-      },
-    });
+    mockTranslateList.mockResolvedValueOnce(
+      TranslateListResponseFactory.withTranslations(['ID', 'Name', 'Number'])
+    );
 
     const result = await inferSchemaFromSheet({
       spreadsheetId: 'dummy',
@@ -76,7 +74,9 @@ describe('infer-schema-from-sheet + schema-generator integration', () => {
     // 検証1: スキーマ推論成功
     expect(result.isError).toBeUndefined();
 
-    const inferredSchema = JSON.parse(result.content[0].text) as FeatureSchema & {
+    const inferredSchema = JSON.parse(
+      result.content[0].text
+    ) as FeatureSchema & {
       dataRange: string;
     };
     const { dataRange, ...schema } = inferredSchema;
