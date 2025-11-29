@@ -25,6 +25,10 @@ import {
   syncSecretsFromGcpToLocal,
   type SyncSecretsFromGcpToLocalArgs,
 } from '../src/tools/sync-secrets-from-gcp-to-local.js';
+import {
+  inferSchemaFromSheet,
+  type InferSchemaArgs,
+} from '../src/tools/infer-schema-from-sheet.js';
 
 // Load .env
 config();
@@ -105,6 +109,22 @@ const TOOL_REGISTRY = {
     ],
     handler: gmailSendEmail,
   } satisfies ToolDefinition<SendEmailArgs>,
+
+  infer_schema_from_sheet: {
+    args: [
+      { name: 'spreadsheetId', required: true, index: 1 },
+      { name: 'sheetName', required: true, index: 2 },
+      {
+        name: 'headers',
+        required: true,
+        index: 3,
+        transform: (value: string) => JSON.parse(value),
+      },
+      { name: 'headerStartCell', required: true, index: 4 },
+      { name: 'lang', required: false, index: 5 },
+    ],
+    handler: inferSchemaFromSheet,
+  } satisfies ToolDefinition<InferSchemaArgs>,
 } as const;
 
 type ToolName = keyof typeof TOOL_REGISTRY;

@@ -230,12 +230,9 @@ server.registerTool(
         .array(z.string())
         .min(1, 'headers must have at least one column name')
         .describe('Array of header labels to search for'),
-      headerRange: z
+      headerStartCell: z
         .string()
-        .optional()
-        .describe(
-          'Deprecated: not used; header range is inferred by scanning headers'
-        ),
+        .describe('Header start cell (e.g. "A3"). Sheet name optional.'),
       lang: z
         .string()
         .optional()
