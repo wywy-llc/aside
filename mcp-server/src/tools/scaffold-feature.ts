@@ -64,6 +64,28 @@ interface NameVariants {
 }
 
 /**
+ * テンプレートデータの型
+ */
+interface TemplateData {
+  featureName: string;
+  featureNameCamel: string;
+  operations: string[];
+  timestamp: string;
+  hasSchema: boolean;
+  typeDefinition?: string;
+  rowToObject?: string;
+  objectToRow?: string;
+  columnRange?: string;
+  fieldCount?: number;
+  validation?: string;
+  defaults?: Record<string, any>;
+  range?: string;
+  rangeName?: string;
+  operationCodes: string;
+  exportsList: string;
+}
+
+/**
  * 機能名を各種命名規則に変換
  *
  * @param featureName - 元の機能名
@@ -131,7 +153,7 @@ async function writeGeneratedFiles(
     repo: HandlebarsTemplateDelegate;
     useCase: HandlebarsTemplateDelegate;
   },
-  data: Record<string, unknown>,
+  data: TemplateData,
   messages: string[]
 ): Promise<void> {
   const files = [
@@ -154,11 +176,114 @@ async function writeGeneratedFiles(
 }
 
 /**
+ * 操作リストを解決
+ *
+ * @param operations - ユーザー指定の操作リスト
+ * @param messages - ログメッセージ配列
+ * @returns 解決された操作ID配列
+ * @remarks 未指定または'all'指定時は全操作を返す
+ */
+function resolveOperationList(
+  operations: string[] | undefined,
+  messages: string[]
+): string[] {
+  // 未指定または'all'指定時は全操作
+  if (!operations || operations.length === 0 || operations.includes('all')) {
+    const allOperations = getAllOperationIds();
+    messages.push(
+      `Using all available operations: ${allOperations.join(', ')}`
+    );
+    return allOperations;
+  }
+
+  messages.push(`Using operations: ${operations.join(', ')}`);
+  return operations;
+}
+
+/**
+ * スキーマデータを構築
+ *
+ * @param names - 機能名のバリエーション
+ * @param schema - スキーマ定義
+ * @param operationIds - 操作ID配列
+ * @returns スキーマデータオブジェクト
+ * @remarks スキーマが未定義の場合は空のデータを返す
+ */
+function buildSchemaData(
+  names: NameVariants,
+  schema: FeatureSchema | undefined,
+  operationIds: string[]
+): Partial<TemplateData> {
+  if (!schema) {
+    return {
+      hasSchema: false,
+      operationCodes: '',
+      exportsList: '',
+    };
+  }
+
+  const rangeName = schema.rangeName || `${names.pascal.toUpperCase()}_RANGE`;
+
+  const operationContext = {
+    featureName: names.pascal,
+    featureNameCamel: names.camel,
+    schema,
+    rangeName,
+  };
+
+  const operationCodes = generateOperationsCodes(
+    operationIds,
+    operationContext
+  );
+  const exportsList = generateExportsList(operationIds);
+
+  return {
+    hasSchema: true,
+    typeDefinition: generateTypeDefinition(names.pascal, schema),
+    rowToObject: generateRowToObject(names.pascal, schema),
+    objectToRow: generateObjectToRow(names.camel, schema),
+    columnRange: generateColumnRange(schema),
+    fieldCount: getFieldCount(schema),
+    validation: generateValidation(names.camel, schema),
+    defaults: generateDefaults(schema),
+    range: schema.range,
+    rangeName,
+    operationCodes: operationCodes.join('\n'),
+    exportsList,
+  };
+}
+
+/**
+ * テンプレートデータを構築
+ *
+ * @param names - 機能名のバリエーション
+ * @param operationIds - 操作ID配列
+ * @param schemaData - スキーマデータ
+ * @returns 完全なテンプレートデータ
+ */
+function buildTemplateData(
+  names: NameVariants,
+  operationIds: string[],
+  schemaData: Partial<TemplateData>
+): TemplateData {
+  return {
+    featureName: names.pascal,
+    featureNameCamel: names.camel,
+    operations: operationIds,
+    timestamp: new Date().toISOString(),
+    hasSchema: false,
+    operationCodes: '',
+    exportsList: '',
+    ...schemaData,
+  };
+}
+
+/**
  * 機能のスキャフォールディングを実行
  *
  * @param args.featureName - 機能名
  * @param args.operations - 生成する操作のリスト(例: ["create", "read", "update"]）)
- * @param args.schema - スキーマ定義(例: { fields: [...], range: "A1:D", rangeName: "TODO_RANGE" }）)
+ * @param args.schema - スキーマ定義(例: { fields: [...], range: "A1:D", rangeName: "TODO_RANGE" }）
  * @returns ツール実行結果
  */
 export async function scaffoldFeature(
@@ -167,71 +292,32 @@ export async function scaffoldFeature(
   const messages: string[] = [];
 
   try {
+    // Early validation
     const { featureName, operations, schema } = args;
-    if (!featureName) throw new Error('featureName is required');
+    if (!featureName) {
+      throw new Error('featureName is required');
+    }
 
+    // 名前変換
     const names = convertFeatureName(featureName);
     messages.push(`Scaffolding feature: ${chalk.bold(names.pascal)}`);
 
+    // ディレクトリ準備
     const templatesDir = await resolveTemplatesDir();
     const targetDir = path.join(process.cwd(), 'src/features', names.camel);
     await fs.mkdir(targetDir, { recursive: true });
 
+    // テンプレート読み込み
     const templates = await loadTemplates(templatesDir);
 
-    // 操作リストの処理（未指定時は全操作、'all'指定時も全操作）
-    let operationIds = operations || [];
-    if (operationIds.length === 0 || operationIds.includes('all')) {
-      operationIds = getAllOperationIds();
-      messages.push(
-        `Using all available operations: ${operationIds.join(', ')}`
-      );
-    } else {
-      messages.push(`Using operations: ${operationIds.join(', ')}`);
-    }
+    // 操作リスト解決
+    const operationIds = resolveOperationList(operations, messages);
 
-    // 操作コードを生成
-    const operationContext = {
-      featureName: names.pascal,
-      featureNameCamel: names.camel,
-      schema,
-      rangeName:
-        schema?.rangeName ||
-        (schema ? `${names.pascal.toUpperCase()}_RANGE` : undefined),
-    };
+    // データ構築
+    const schemaData = buildSchemaData(names, schema, operationIds);
+    const templateData = buildTemplateData(names, operationIds, schemaData);
 
-    const operationCodes = generateOperationsCodes(
-      operationIds,
-      operationContext
-    );
-    const exportsList = generateExportsList(operationIds);
-
-    // スキーマからコード生成データを準備
-    const schemaData = schema
-      ? {
-          hasSchema: true,
-          typeDefinition: generateTypeDefinition(names.pascal, schema),
-          rowToObject: generateRowToObject(names.pascal, schema),
-          objectToRow: generateObjectToRow(names.camel, schema),
-          columnRange: generateColumnRange(schema),
-          fieldCount: getFieldCount(schema),
-          validation: generateValidation(names.camel, schema),
-          defaults: generateDefaults(schema),
-          range: schema.range,
-          rangeName: schema.rangeName || `${names.pascal.toUpperCase()}_RANGE`,
-          operationCodes: operationCodes.join('\n'),
-          exportsList,
-        }
-      : { hasSchema: false, operationCodes: '', exportsList: '' };
-
-    const templateData = {
-      featureName: names.pascal,
-      featureNameCamel: names.camel,
-      operations: operationIds,
-      timestamp: new Date().toISOString(),
-      ...schemaData,
-    };
-
+    // ファイル生成
     await writeGeneratedFiles(
       targetDir,
       names.pascal,
